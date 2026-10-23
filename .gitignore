@@ -1,0 +1,9 @@
+# Moi truong ao & Cache
+.venv/
+.pytest_cache/
+.vscode/
+__pycache__/
+*.pyc
+
+# Bao mat API Key (Tuyet doi khong day len Git)
+.env
