@@ -77,6 +77,8 @@ export default function IncidentCommandCenter() {
                   ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
                   : severity === "P1"
                   ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                  : severity === "P3"
+                  ? "bg-sky-500/15 text-sky-400 border border-sky-500/30"
                   : "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
               }`}
             >

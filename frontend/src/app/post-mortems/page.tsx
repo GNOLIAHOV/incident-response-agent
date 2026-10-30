@@ -15,7 +15,7 @@ import { fetchIncidents } from "@/lib/api";
 interface CatalogItem {
   id: string;
   service: string;
-  severity: "P0" | "P1" | "P2";
+  severity: "P0" | "P1" | "P2" | "P3";
   date: string;
   mttr: string;
   title: string;
@@ -69,7 +69,7 @@ function PostMortemsCatalogPage() {
         const dynamicItems: CatalogItem[] = resolved.map((inc) => ({
           id: inc.thread_id,
           service: inc.service_name || "service",
-          severity: (inc.severity as "P0" | "P1" | "P2") || "P2",
+          severity: (inc.severity as "P0" | "P1" | "P2" | "P3") || "P2",
           date: inc.created_at ? inc.created_at.split("T")[0] : "2026-10-31",
           mttr: "28s",
           title: `Google SRE Post-Mortem: ${inc.service_name} Remediation`,
@@ -138,6 +138,8 @@ function PostMortemsCatalogPage() {
                       ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
                       : item.severity === "P1"
                       ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      : item.severity === "P3"
+                      ? "bg-sky-500/15 text-sky-400 border border-sky-500/30"
                       : "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
                   }`}
                 >

@@ -99,7 +99,17 @@ export default function IncidentsHubPage() {
                     ? "Action Required • Human-in-the-Loop Gate"
                     : "Active Incident In Session"}
                 </span>
-                <span className="px-2 py-0.2 rounded text-[10px] font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    primaryActive.severity === "P0"
+                      ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                      : primaryActive.severity === "P1"
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      : primaryActive.severity === "P3"
+                      ? "bg-sky-500/15 text-sky-400 border border-sky-500/30"
+                      : "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+                  }`}
+                >
                   {primaryActive.severity}
                 </span>
               </div>

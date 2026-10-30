@@ -56,6 +56,12 @@ export function IncidentTable({ incidents }: IncidentTableProps) {
             P2 MEDIUM
           </span>
         );
+      case "P3":
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+            P3 LOW
+          </span>
+        );
       default:
         return (
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-surface-800 text-slate-400 border border-hairline">
@@ -136,7 +142,7 @@ export function IncidentTable({ incidents }: IncidentTableProps) {
 
           {/* Severity Filter Tabs */}
           <div className="flex items-center bg-surface-850 rounded-lg p-0.5 border border-hairline">
-            {["ALL", "P0", "P1", "P2"].map((sev) => (
+            {["ALL", "P0", "P1", "P2", "P3"].map((sev) => (
               <button
                 key={sev}
                 onClick={() => setSeverityFilter(sev)}

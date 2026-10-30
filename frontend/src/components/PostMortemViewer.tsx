@@ -84,8 +84,24 @@ export function PostMortemViewer({ data }: PostMortemViewerProps) {
         </div>
         <div>
           <span className="text-slate-500 text-[11px] block mb-0.5">Severity Rating</span>
-          <span className="font-mono font-bold text-rose-400">
-            {data.severity} CRITICAL
+          <span
+            className={`font-mono font-bold ${
+              data.severity === "P0"
+                ? "text-rose-400"
+                : data.severity === "P1"
+                ? "text-amber-400"
+                : data.severity === "P3"
+                ? "text-sky-400"
+                : "text-yellow-400"
+            }`}
+          >
+            {data.severity === "P0"
+              ? "P0 CRITICAL"
+              : data.severity === "P1"
+              ? "P1 HIGH"
+              : data.severity === "P2"
+              ? "P2 MEDIUM"
+              : "P3 LOW"}
           </span>
         </div>
         <div>
