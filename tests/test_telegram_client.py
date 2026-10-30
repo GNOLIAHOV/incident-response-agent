@@ -209,6 +209,40 @@ def test_telegram_webhook_callback_reject():
     assert st.values.get("approval_status") == "rejected"
 
 
+def test_telegram_webhook_callback_idempotency():
+    """Kiểm tra tính bất biến (Idempotency) khi người dùng bấm nút nhiều lần."""
+    thread_id = "INC-TEST-IDEMPOTENT"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    incident_app.update_state(
+        config,
+        {
+            "incident_id": thread_id,
+            "service_name": "auth_service",
+            "severity": "P1",
+            "approval_status": "approved",  # Đã được duyệt trước đó
+            "timeline": [],
+        },
+    )
+
+    update_payload = {
+        "update_id": 123499,
+        "callback_query": {
+            "id": "cb_query_dup",
+            "from": {"id": 111, "username": "sre_lead"},
+            "message": {"message_id": 444, "chat": {"id": 999}},
+            "data": f"approve:{thread_id}",
+        },
+    }
+
+    bg_tasks = BackgroundTasks()
+    data = handle_telegram_webhook(update_payload, bg_tasks)
+    assert data["ok"] is True
+    assert data["action"] == "already_approved"
+    # Không tạo thêm background task nào nữa
+    assert len(bg_tasks.tasks) == 0
+
+
 def test_telegram_webhook_text_command_status():
     """Kiểm tra lệnh text '/status <thread_id>' gửi từ Telegram chat."""
     thread_id = "INC-TEST-CMD"

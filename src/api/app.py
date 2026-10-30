@@ -50,20 +50,6 @@ def resume_agent_workflow_task(thread_id: str, notify_telegram: bool = True):
         for _ in incident_app.stream(None, config=config):
             pass
         logger.info(f"Workflow cho thread {thread_id} đã hoàn tất.")
-
-        if notify_telegram:
-            final_snapshot = incident_app.get_state(config)
-            if final_snapshot and final_snapshot.values:
-                status_val = final_snapshot.values.get("approval_status")
-                pr_url = final_snapshot.values.get("github_pr_url")
-                if status_val == "approved":
-                    telegram_client.send_message(
-                        f"🎉 *[SỰ CỐ `{thread_id}` ĐÃ XỬ LÝ THÀNH CÔNG]*\n"
-                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                        f"• *Kết quả:* Bản vá đã được mở Pull Request.\n"
-                        f"• *GitHub PR:* {pr_url or 'Simulated PR #142'}\n"
-                        f"• *Post-Mortem:* Đã tạo tự động theo chuẩn Google SRE."
-                    )
     except Exception as exc:
         logger.error(f"Lỗi trong tác vụ tiếp tục workflow cho thread {thread_id}: {str(exc)}", exc_info=True)
 
@@ -389,6 +375,11 @@ def handle_telegram_webhook(payload: Dict[str, Any], background_tasks: Backgroun
                 telegram_client.answer_callback_query(cb_id, text=f"Không tìm thấy sự cố {thread_id}!")
                 return {"ok": False, "error": f"Incident {thread_id} not found"}
 
+            current_status = snapshot.values.get("approval_status")
+            if current_status in ["approved", "completed"]:
+                telegram_client.answer_callback_query(cb_id, text="Sự cố này đã được phê duyệt trước đó!")
+                return {"ok": True, "action": "already_approved", "thread_id": thread_id, "user": user}
+
             telegram_client.answer_callback_query(cb_id, text=f"✅ Đã duyệt bởi @{user}!")
             if msg_id and chat_id:
                 telegram_client.edit_message_text(
@@ -405,6 +396,16 @@ def handle_telegram_webhook(payload: Dict[str, Any], background_tasks: Backgroun
             return {"ok": True, "action": "approved", "thread_id": thread_id, "user": user}
 
         elif action == "reject":
+            snapshot = incident_app.get_state(config)
+            if not snapshot or not snapshot.values:
+                telegram_client.answer_callback_query(cb_id, text=f"Không tìm thấy sự cố {thread_id}!")
+                return {"ok": False, "error": f"Incident {thread_id} not found"}
+
+            current_status = snapshot.values.get("approval_status")
+            if current_status in ["rejected", "cancelled"]:
+                telegram_client.answer_callback_query(cb_id, text="Sự cố này đã bị từ chối trước đó!")
+                return {"ok": True, "action": "already_rejected", "thread_id": thread_id, "user": user}
+
             telegram_client.answer_callback_query(cb_id, text=f"❌ Đã từ chối bởi @{user}!")
             if msg_id and chat_id:
                 telegram_client.edit_message_text(
