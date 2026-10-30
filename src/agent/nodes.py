@@ -242,8 +242,17 @@ def execute_fix_node(state: IncidentState) -> dict:
             "branch": branch_name,
             "title": pr_title,
             "changes": fix_content,
+            "incident_id": incident_id,
+            "service_slug": service_slug,
         }
     )
+
+    github_pr_url = f"https://github.com/{repo_name}/pull/142"
+    if "(URL: " in pr_result:
+        try:
+            github_pr_url = pr_result.split("(URL: ")[1].split(")")[0]
+        except Exception:
+            pass
 
     # 2. Tạo GitHub Issue cho việc phòng ngừa tái diễn sau sự cố
     create_github_prevention_issue.invoke(
@@ -260,7 +269,7 @@ def execute_fix_node(state: IncidentState) -> dict:
     timeline.append(
         {
             "time": now,
-            "event": f"Bản vá được phê duyệt. Đã tạo PR trên {repo_name}.",
+            "event": f"Bản vá được phê duyệt. Đã tạo PR tại {github_pr_url}.",
             "stage": "resolution",
         }
     )
@@ -280,7 +289,7 @@ def execute_fix_node(state: IncidentState) -> dict:
     return {
         "messages": [AIMessage(content=f"Đã hoàn thành: {pr_result}")],
         "approval_status": "approved",
-        "github_pr_url": f"https://github.com/{repo_name}/pull/142",
+        "github_pr_url": github_pr_url,
         "post_mortem_report": post_mortem,
         "timeline": timeline,
     }

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from langchain_core.tools import tool
+from src.tools.github_client import github_client
 
 
 def generate_google_sre_postmortem(
@@ -81,11 +82,9 @@ def create_github_prevention_issue(
     labels: Optional[List[str]] = None,
 ) -> dict:
     """Tạo GitHub Issue tự động để theo dõi các đầu việc phòng ngừa tái diễn sau sự cố."""
-    labels_list = labels or ["sre", "prevention"]
-    issue_number = 189
-    return {
-        "status": "created",
-        "issue_number": issue_number,
-        "issue_url": f"https://github.com/{repo}/issues/{issue_number}",
-        "message": f"Successfully created prevention issue #{issue_number} on {repo} with labels {labels_list}.",
-    }
+    return github_client.create_issue(
+        repo=repo,
+        title=title,
+        body=body,
+        labels=labels,
+    )

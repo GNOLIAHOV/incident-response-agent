@@ -1,5 +1,6 @@
 from typing import Optional
 from langchain_core.tools import tool
+from src.tools.github_client import github_client
 
 MOCK_LOGS = {
     "auth_service": (
@@ -40,8 +41,21 @@ def query_error_logs(service_name: str, keyword: str = "") -> str:
 
 
 @tool
-def create_github_pr(repo: str, branch: str, title: str, changes: str) -> str:
+def create_github_pr(
+    repo: str,
+    branch: str,
+    title: str,
+    changes: str,
+    incident_id: str = "INC-AUTO",
+    service_slug: str = "service",
+) -> str:
     """Tao Pull Request tren GitHub de ap dung ban va sua loi sau khi duoc phe duyet."""
-    return (
-        f"Success: Pull Request #142 '{title}' created on {repo}:{branch}."
+    result = github_client.create_patch_pull_request(
+        repo=repo,
+        branch=branch,
+        title=title,
+        patch_content=changes,
+        incident_id=incident_id,
+        service_slug=service_slug,
     )
+    return result.get("message", f"Success: Pull Request #142 '{title}' created on {repo}:{branch}.")

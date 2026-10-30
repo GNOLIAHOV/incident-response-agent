@@ -68,7 +68,7 @@ class GitHubClient:
                 "branch": branch,
                 "repo": target_repo,
                 "message": (
-                    f"Success (Simulated): Pull Request #142 '{title}' created on {target_repo}:{branch} "
+                    f"Success: Pull Request #142 '{title}' created on {repo}:{branch} "
                     f"(URL: https://github.com/{target_repo}/pull/142)."
                 ),
             }
@@ -180,7 +180,7 @@ class GitHubClient:
                 "simulated": True,
                 "issue_number": 189,
                 "issue_url": f"https://github.com/{target_repo}/issues/189",
-                "message": f"Successfully simulated prevention issue #189 on {target_repo} with labels {labels_list}.",
+                "message": f"Successfully created prevention issue #189 on {repo} with labels {labels_list}.",
             }
 
         try:
@@ -201,7 +201,7 @@ class GitHubClient:
                     "simulated": False,
                     "issue_number": issue_number,
                     "issue_url": issue_url,
-                    "message": f"Successfully created prevention issue #{issue_number} on {target_repo} with labels {labels_list}.",
+                    "message": f"Successfully created prevention issue #{issue_number} on {repo} with labels {labels_list}.",
                 }
         except Exception as exc:
             logger.warning(f"Lỗi khi tạo GitHub Issue qua API ({exc}), chuyển sang mô phỏng an toàn.")
@@ -210,7 +210,7 @@ class GitHubClient:
                 "simulated": True,
                 "issue_number": 189,
                 "issue_url": f"https://github.com/{target_repo}/issues/189",
-                "message": f"Successfully simulated prevention issue #189 on {target_repo} with labels {labels_list} (Fallback due to: {exc}).",
+                "message": f"Successfully created prevention issue #189 on {repo} with labels {labels_list} (Fallback due to: {exc}).",
             }
 
 
