@@ -86,7 +86,10 @@ An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent 
 incident-response-agent/
 ├── Dockerfile                    # Multi-stage production container build (non-root appuser)
 ├── docker-compose.yml            # Container orchestration with volume persistence
+├── .env.example                  # Enterprise configuration template for customers
 ├── .dockerignore                 # Excluded directories and artifacts
+├── deploy/                       # Enterprise In-VPC deployment manifests
+│   └── kubernetes/               # Kubernetes Deployment, Service, PVC, ConfigMap, Secret
 ├── docs/                         # Specifications & Implementation Plans
 │   └── superpowers/
 │       ├── specs/
@@ -199,6 +202,21 @@ pip install -r requirements.txt
 2. Run the FastAPI Server & Dashboard:
 ```bash
 uvicorn src.api.app:app --reload --port 8000
+```
+
+### Option C: Enterprise Kubernetes Deployment (In-VPC)
+
+For enterprise clusters (EKS, GKE, AKS, or on-premise Kubernetes):
+
+1. Configure secrets and configmap in `deploy/kubernetes/configmap-and-secrets.yaml`.
+2. Apply the deployment manifests:
+```bash
+kubectl apply -f deploy/kubernetes/configmap-and-secrets.yaml
+kubectl apply -f deploy/kubernetes/deployment.yaml
+```
+3. Verify pod status:
+```bash
+kubectl get pods -n sre-agent
 ```
 
 ---
