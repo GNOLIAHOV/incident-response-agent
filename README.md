@@ -199,7 +199,7 @@ docker compose up -d --build
 ```
 
 2. Access Dashboard:
-* **Enterprise SRE Web Portal:** [http://localhost:3001/](http://localhost:3001/) (hoặc [http://localhost:3000/](http://localhost:3000/))
+* **Enterprise SRE Web Portal:** [http://localhost:3002/](http://localhost:3002/) (hoặc [http://localhost:3000/](http://localhost:3000/))
 * **FastAPI Backend Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 * **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
 
