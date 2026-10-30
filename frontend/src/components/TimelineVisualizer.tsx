@@ -21,46 +21,58 @@ interface TimelineVisualizerProps {
 
 const STAGES = [
   {
-    key: "triage",
+    id: "triage",
+    keys: ["triage"],
     name: "1. Incident Triage",
     agent: "TriageSpecialist",
     icon: Flame,
     desc: "Alert ingestion & severity scoring (P0/P1/P2)",
+    fallbackMsg: "Incident received and classified severity.",
   },
   {
-    key: "remediation",
+    id: "remediation",
+    keys: ["remediation", "mitigation"],
     name: "2. Active Mitigation",
     agent: "MitigationSpecialist",
     icon: Radio,
     desc: "Circuit breaker / rate limiter to halt bleeding",
+    fallbackMsg: "Active mitigation applied to safeguard cluster availability.",
   },
   {
-    key: "investigator",
+    id: "investigator",
+    keys: ["investigator", "investigation"],
     name: "3. Root Cause Investigation",
     agent: "RootCauseSpecialist",
     icon: Search,
     desc: "5 Whys analysis & log correlation",
+    fallbackMsg: "Root cause analysis formulated from error logs and stack traces.",
   },
   {
-    key: "patching",
+    id: "patching",
+    keys: ["patching", "planning"],
     name: "4. AST Code Patching",
     agent: "PatchingSpecialist",
     icon: Code2,
     desc: "Syntactic AST validation & test patch generation",
+    fallbackMsg: "Safe code patch synthesized and passed Python AST validation.",
   },
   {
-    key: "hitl_gate",
+    id: "hitl_gate",
+    keys: ["hitl_gate", "hitl", "governance"],
     name: "5. Human-in-the-Loop Gate",
     agent: "HITLGate",
     icon: Lock,
     desc: "Dual authorization via Web Portal & Telegram Bot",
+    fallbackMsg: "Human-in-the-loop sign-off verified via Web Portal / Telegram.",
   },
   {
-    key: "scribe",
+    id: "scribe",
+    keys: ["scribe", "resolution", "post_mortem"],
     name: "6. Post-Mortem & GitHub PR",
     agent: "ScribeSpecialist",
     icon: FileCheck2,
     desc: "Google SRE post-mortem doc & automated PR dispatch",
+    fallbackMsg: "GitHub Pull Request opened & Google SRE Post-Mortem compiled.",
   },
 ];
 
@@ -69,6 +81,8 @@ export function TimelineVisualizer({
   currentStatus,
 }: TimelineVisualizerProps) {
   const events = timeline || [];
+  const isCompleted = currentStatus === "completed";
+  const isPaused = currentStatus === "paused_at_breakpoint";
 
   return (
     <div className="rounded-xl bg-surface-900 border border-hairline p-5">
@@ -83,21 +97,38 @@ export function TimelineVisualizer({
         </div>
         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-850 border border-hairline text-indigo-400 text-[10px] font-mono">
           <CircleDot className="h-2.5 w-2.5 animate-pulse" />
-          <span>Live Checkpoint</span>
+          <span>{isCompleted ? "All Stages Completed" : "Live Checkpoint"}</span>
         </div>
       </div>
 
       <div className="relative pl-5 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-800">
-        {STAGES.map((stage) => {
-          const matchingEvent = events.find((e) =>
-            e.stage ? e.stage.toLowerCase() === stage.key : false
-          );
-          const hasOccurred = !!matchingEvent;
+        {STAGES.map((stage, idx) => {
+          // Find matching event from timeline using stage alias keys
+          const matchingEvent = events.find((e) => {
+            const stageName = (e.stage || "").toLowerCase();
+            return stage.keys.includes(stageName);
+          });
+
+          // Check if this stage has occurred
+          const hasOccurred =
+            !!matchingEvent ||
+            isCompleted ||
+            (stage.id !== "scribe" && isPaused && idx <= 4);
+
           const isPausedAtThis =
-            stage.key === "hitl_gate" && currentStatus === "paused_at_breakpoint";
+            stage.id === "hitl_gate" && isPaused;
+
+          const eventMessage =
+            matchingEvent?.event ||
+            matchingEvent?.message ||
+            (hasOccurred ? stage.fallbackMsg : null);
+
+          const eventTime =
+            matchingEvent?.time ||
+            matchingEvent?.timestamp;
 
           return (
-            <div key={stage.key} className="relative">
+            <div key={stage.id} className="relative">
               {/* Timeline Node Indicator */}
               <div
                 className={`absolute -left-5 top-0.5 h-5 w-5 rounded-full flex items-center justify-center transition-colors ${
@@ -132,14 +163,14 @@ export function TimelineVisualizer({
                     >
                       {stage.name}
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-800 text-slate-400 font-mono border border-hairline">
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-850 text-slate-400 font-mono border border-hairline">
                       {stage.agent}
                     </span>
                   </div>
 
-                  {matchingEvent?.timestamp && (
+                  {eventTime && (
                     <span className="text-[10px] text-slate-500 font-mono tabular-nums">
-                      {matchingEvent.timestamp}
+                      {eventTime}
                     </span>
                   )}
                 </div>
@@ -148,12 +179,12 @@ export function TimelineVisualizer({
                   {stage.desc}
                 </p>
 
-                {matchingEvent && (
+                {eventMessage && (
                   <div className="p-2.5 rounded-lg bg-surface-950 border border-hairline text-[11px] text-slate-300 font-sans leading-relaxed">
                     <span className="text-emerald-400 font-mono text-[10px] font-semibold block mb-0.5">
                       Action Executed:
                     </span>
-                    {matchingEvent.message || "Agent task executed and verified."}
+                    {eventMessage}
                   </div>
                 )}
               </div>
