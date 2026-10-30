@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Any, Dict, List
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, status
 from fastapi.responses import HTMLResponse
@@ -9,11 +10,13 @@ from src.core.config import settings
 from src.agent.graph import incident_app
 from src.agent.nodes import extract_text_content
 from src.api.schemas import (
+    AlertWebhookPayload,
     IncidentApprovalRequest,
     IncidentApprovalResponse,
     IncidentStatusResponse,
     IncidentTriggerRequest,
     IncidentTriggerResponse,
+    PostMortemResponse,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -54,28 +57,77 @@ def health_check():
 
 
 @app.post(
+    "/alerts/webhook",
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["Alert Ingestion"],
+)
+def handle_alert_webhook(payload: AlertWebhookPayload, background_tasks: BackgroundTasks):
+    """Tiếp nhận cảnh báo tự động từ Prometheus Alertmanager / Grafana Webhook."""
+    if not payload.alerts:
+        service_name = "unknown_service"
+        issue_desc = "Cảnh báo không có chi tiết cụ thể"
+    else:
+        first_alert = payload.alerts[0]
+        service_name = first_alert.labels.get("service") or first_alert.labels.get("job") or "auth_service"
+        issue_desc = (
+            first_alert.annotations.get("description")
+            or first_alert.annotations.get("summary")
+            or first_alert.labels.get("alertname")
+            or "Phát hiện bất thường qua hệ thống giám sát"
+        )
+
+    thread_id = f"ALERT-{uuid.uuid4().hex[:8].upper()}"
+
+    initial_input = {
+        "messages": [
+            HumanMessage(
+                content=f"[WEBHOOK ALERT] Dịch vụ '{service_name}' kích hoạt cảnh báo: {issue_desc}."
+            )
+        ],
+        "incident_id": thread_id,
+        "service_name": service_name,
+        "issue_description": issue_desc,
+        "alert_source": "prometheus_webhook",
+        "proposed_fix": "",
+        "approval_status": "pending",
+        "timeline": [],
+    }
+
+    background_tasks.add_task(run_agent_workflow_task, thread_id, initial_input)
+
+    return {
+        "status": "accepted",
+        "thread_id": thread_id,
+        "service_name": service_name,
+        "message": f"Alert received for {service_name}. Autonomous SRE workflow dispatched in background.",
+    }
+
+
+@app.post(
     "/incidents/trigger",
     response_model=IncidentTriggerResponse,
     status_code=status.HTTP_202_ACCEPTED,
     tags=["Incidents"],
 )
 def trigger_incident(payload: IncidentTriggerRequest, background_tasks: BackgroundTasks):
-    """Tiếp nhận sự cố và đẩy vào tác vụ chạy nền (BackgroundTasks), phản hồi ngay lập tức."""
+    """Tiếp nhận sự cố thủ công từ người dùng và đẩy vào tác vụ chạy nền."""
     thread_id = payload.thread_id or f"INCIDENT-{uuid.uuid4().hex[:8].upper()}"
 
     initial_input = {
         "messages": [
             HumanMessage(
-                content=f"Service '{payload.service_name}' gap su co: {payload.issue_description}. Hay tra cuu log va phan tich."
+                content=f"Service '{payload.service_name}' gặp sự cố: {payload.issue_description}. Hãy tra cứu log và phân tích."
             )
         ],
+        "incident_id": thread_id,
         "service_name": payload.service_name,
         "issue_description": payload.issue_description,
+        "alert_source": "manual",
         "proposed_fix": "",
         "approval_status": "pending",
+        "timeline": [],
     }
 
-    # Đẩy quy trình vào chạy nền
     background_tasks.add_task(run_agent_workflow_task, thread_id, initial_input)
 
     return IncidentTriggerResponse(
@@ -93,11 +145,10 @@ def trigger_incident(payload: IncidentTriggerRequest, background_tasks: Backgrou
     tags=["Incidents"],
 )
 def get_incident_status(thread_id: str):
-    """Kiểm tra tiến độ, lấy bản vá đề xuất khi Agent đã chạm breakpoint."""
+    """Kiểm tra tiến độ, lấy trạng thái dập lửa, timeline và bản vá đề xuất."""
     config = {"configurable": {"thread_id": thread_id}}
     snapshot = incident_app.get_state(config)
 
-    # Trường hợp Agent chưa khởi tạo hoặc chưa có dữ liệu
     if not snapshot or not snapshot.values:
         return IncidentStatusResponse(
             thread_id=thread_id,
@@ -111,7 +162,6 @@ def get_incident_status(thread_id: str):
     next_nodes = list(snapshot.next) if snapshot.next else []
     proposed_fix = snapshot.values.get("proposed_fix")
 
-    # Điểm ngắt chỉ thực sự bật khi Agent đã chạy xong plan_fix và đang dừng trước execute_fix
     is_paused = ("execute_fix" in next_nodes) and bool(proposed_fix)
 
     if is_paused:
@@ -124,9 +174,14 @@ def get_incident_status(thread_id: str):
     return IncidentStatusResponse(
         thread_id=thread_id,
         status=current_status,
+        severity=snapshot.values.get("severity"),
+        service_name=snapshot.values.get("service_name"),
         approval_status=snapshot.values.get("approval_status"),
         next_node=next_nodes[0] if next_nodes else None,
         proposed_fix=proposed_fix,
+        mitigation_action_taken=snapshot.values.get("mitigation_action_taken"),
+        timeline=snapshot.values.get("timeline"),
+        post_mortem_report=snapshot.values.get("post_mortem_report"),
         is_paused=is_paused,
     )
 
@@ -137,7 +192,7 @@ def get_incident_status(thread_id: str):
     tags=["Incidents"],
 )
 def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
-    """Gửi quyết định phê duyệt để Agent tiếp tục thực thi tạo PR hoặc hủy bỏ."""
+    """Gửi quyết định phê duyệt hoặc từ chối kèm góp ý (Human Feedback Loop)."""
     config = {"configurable": {"thread_id": thread_id}}
     snapshot = incident_app.get_state(config)
 
@@ -153,35 +208,118 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
             detail=f"Phiên làm việc '{thread_id}' không ở trạng thái chờ duyệt.",
         )
 
-    decision = "approved" if payload.approved else "rejected"
-
-    incident_app.update_state(
-        config,
-        {"approval_status": decision},
-        as_node="plan_fix",
-    )
-
-    try:
-        # Resume đồ thị để hoàn tất node execute_fix
+    # 1. Trường hợp phê duyệt
+    if payload.approved:
+        decision = "approved"
+        incident_app.update_state(
+            config,
+            {"approval_status": "approved"},
+            as_node="plan_fix",
+        )
         for _ in incident_app.stream(None, config=config):
             pass
 
         final_snapshot = incident_app.get_state(config)
         messages = final_snapshot.values.get("messages", [])
-        final_output = extract_text_content(messages[-1].content) if messages else ""
+        final_output = extract_text_content(messages[-1].content) if messages else "Đã hoàn tất."
+        post_mortem = final_snapshot.values.get("post_mortem_report")
 
         return IncidentApprovalResponse(
             thread_id=thread_id,
-            status=decision,
+            status="approved",
             final_output=final_output,
+            post_mortem_report=post_mortem,
         )
-    except Exception as exc:
+
+    # 2. Trường hợp từ chối kèm góp ý (Human Feedback Loop)
+    elif payload.feedback:
+        incident_app.update_state(
+            config,
+            {
+                "approval_status": "revising",
+                "reviewer_feedback": payload.feedback,
+            },
+            as_node="plan_fix",
+        )
+        return IncidentApprovalResponse(
+            thread_id=thread_id,
+            status="revising",
+            final_output=f"Đã ghi nhận góp ý: '{payload.feedback}'. Agent đang tiến hành điều chỉnh bản vá...",
+            post_mortem_report=None,
+        )
+
+    # 3. Trường hợp từ chối hoàn toàn
+    else:
+        incident_app.update_state(
+            config,
+            {"approval_status": "rejected"},
+            as_node="plan_fix",
+        )
+        for _ in incident_app.stream(None, config=config):
+            pass
+
+        return IncidentApprovalResponse(
+            thread_id=thread_id,
+            status="rejected",
+            final_output="Kế hoạch sửa đổi đã bị hủy bỏ bởi kỹ sư.",
+            post_mortem_report=None,
+        )
+
+
+@app.get(
+    "/incidents/{thread_id}/post-mortem",
+    response_model=PostMortemResponse,
+    tags=["Incidents"],
+)
+def get_incident_post_mortem(thread_id: str):
+    """Lấy báo cáo Google SRE Post-Mortem hoàn chỉnh sau khi sự cố đã được giải quyết."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = incident_app.get_state(config)
+
+    if not snapshot or not snapshot.values:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi khi resume Agent: {str(exc)}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy sự cố với thread_id '{thread_id}'.",
         )
 
+    report = snapshot.values.get("post_mortem_report")
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sự cố '{thread_id}' chưa hoàn tất hoặc chưa có báo cáo Post-Mortem.",
+        )
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("src.api.app:app", host="127.0.0.1", port=8000, reload=True)
+    return PostMortemResponse(
+        incident_id=thread_id,
+        service_name=snapshot.values.get("service_name", "app_service"),
+        severity=snapshot.values.get("severity", "P2"),
+        post_mortem_markdown=report,
+    )
+
+
+@app.get(
+    "/incidents",
+    response_model=List[Dict[str, Any]],
+    tags=["Incidents"],
+)
+def list_incidents():
+    """Liệt kê danh sách tất cả các sự cố đang lưu trong cơ sở dữ liệu SQLite."""
+    # Lấy danh sách các thread từ checkpointer nếu hỗ trợ
+    checkpointer = getattr(incident_app, "checkpointer", None)
+    if checkpointer and hasattr(checkpointer, "storage"):
+        thread_ids = list(checkpointer.storage.keys())
+        results = []
+        for tid in thread_ids:
+            st = incident_app.get_state({"configurable": {"thread_id": tid}})
+            if st and st.values:
+                results.append(
+                    {
+                        "thread_id": tid,
+                        "service_name": st.values.get("service_name"),
+                        "severity": st.values.get("severity"),
+                        "status": st.values.get("approval_status"),
+                        "mitigation_action": st.values.get("mitigation_action_taken"),
+                    }
+                )
+        return results
+    return []
