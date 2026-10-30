@@ -40,3 +40,7 @@ class IncidentState(TypedDict, total=False):
     # Resolution & Post-Mortem
     github_pr_url: Optional[str]
     post_mortem_report: Optional[str]
+
+    # Multi-Agent Swarm Orchestration
+    next_worker: Optional[Literal["remediation", "investigator", "patching", "hitl", "scribe", "escalate", "FINISH"]]
+    swarm_iterations: int  # Giới hạn tối đa 5 lượt điều phối (Circuit Breaker)
