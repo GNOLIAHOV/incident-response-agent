@@ -138,3 +138,100 @@ def test_scribe_worker_rejected():
     }
     result = scribe_worker(state)
     assert "Hủy thao tác" in result["messages"][0].content or "từ chối" in result["messages"][0].content.lower()
+
+
+def test_supervisor_routing_progression():
+    from src.agent.swarm.supervisor import supervisor_node
+
+    # 1. Ban đầu chưa dập lửa -> remediation
+    state: IncidentState = {
+        "incident_id": "INC-ROUTING-01",
+        "service_name": "auth_service",
+        "mitigation_action_taken": "",
+        "mitigation_status": "skipped",
+        "swarm_iterations": 0,
+    }
+    r1 = supervisor_node(state)
+    assert r1["next_worker"] == "remediation"
+    assert r1["swarm_iterations"] == 1
+
+    # 2. Đã dập lửa nhưng chưa RCA -> investigator
+    state.update({"mitigation_action_taken": "restart", "mitigation_status": "success", "swarm_iterations": 1})
+    r2 = supervisor_node(state)
+    assert r2["next_worker"] == "investigator"
+    assert r2["swarm_iterations"] == 2
+
+    # 3. Đã có RCA nhưng chưa có fix -> patching
+    state.update({"investigation_summary": "RCA done", "swarm_iterations": 2})
+    r3 = supervisor_node(state)
+    assert r3["next_worker"] == "patching"
+    assert r3["swarm_iterations"] == 3
+
+    # 4. Đã có fix nhưng pending review -> hitl
+    state.update({"proposed_fix": "fix code", "approval_status": "pending", "swarm_iterations": 3})
+    r4 = supervisor_node(state)
+    assert r4["next_worker"] == "hitl"
+
+    # 5. Đã duyệt -> scribe
+    state.update({"approval_status": "approved", "swarm_iterations": 3})
+    r5 = supervisor_node(state)
+    assert r5["next_worker"] == "scribe"
+
+
+def test_supervisor_circuit_breaker_escalation():
+    from src.agent.swarm.supervisor import supervisor_node
+
+    # Khi iterations >= 5 -> kích hoạt ngắt mạch escalate
+    state: IncidentState = {
+        "incident_id": "INC-BREAKER-01",
+        "service_name": "auth_service",
+        "severity": "P1",
+        "approval_status": "revising",
+        "swarm_iterations": 5,
+        "timeline": [],
+    }
+    res = supervisor_node(state)
+    assert res["next_worker"] == "escalate"
+    assert res["swarm_iterations"] == 6
+    assert any("Ngắt mạch" in t.get("event", "") for t in res.get("timeline", []))
+
+
+def test_swarm_graph_full_lifecycle_and_pause():
+    from src.agent.graph import create_incident_graph
+    from langgraph.checkpoint.memory import MemorySaver
+    from langchain_core.messages import HumanMessage
+
+    app = create_incident_graph(checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": "TEST-SWARM-E2E"}}
+
+    initial_input = {
+        "messages": [HumanMessage(content="Auth service throwing TypeError")],
+        "incident_id": "INC-SWARM-E2E",
+        "service_name": "auth_service",
+        "severity": "P1",
+        "issue_description": "TypeError: 'NoneType' object is not subscriptable",
+        "alert_source": "prometheus",
+        "approval_status": "pending",
+        "timeline": [],
+    }
+
+    # 1. Chạy đồ thị cho đến khi chạm breakpoint tại hitl_gate
+    for _ in app.stream(initial_input, config=config):
+        pass
+
+    snapshot = app.get_state(config)
+    assert snapshot.next == ("hitl_gate",)
+    assert snapshot.values["mitigation_status"] == "success"
+    assert "investigation_summary" in snapshot.values
+    assert "proposed_fix" in snapshot.values
+
+    # 2. Kỹ sư duyệt bản vá -> chạy tiếp tới hoàn tất
+    app.update_state(config, {"approval_status": "approved"})
+    for _ in app.stream(None, config=config):
+        pass
+
+    final_snapshot = app.get_state(config)
+    assert not final_snapshot.next
+    assert final_snapshot.values["approval_status"] == "approved"
+    assert "github_pr_url" in final_snapshot.values
+    assert "post_mortem_report" in final_snapshot.values

@@ -1,73 +1,76 @@
 from langgraph.graph import END, START, StateGraph
 
 from src.agent.checkpointer import PersistentSqliteSaver
-from src.agent.nodes import (
-    execute_fix_node,
-    investigate_node,
-    mitigate_node,
-    plan_fix_node,
-    route_investigation,
-    tool_node,
-    triage_node,
-)
+from src.agent.nodes import triage_node
 from src.agent.state import IncidentState
+from src.agent.swarm.supervisor import supervisor_node
+from src.agent.swarm.workers import (
+    hitl_gate_node,
+    investigator_worker,
+    patching_worker,
+    remediation_worker,
+    scribe_worker,
+)
+
+
+def route_supervisor(state: IncidentState) -> str:
+    """Hàm điều kiện phân nhánh từ Incident Commander Supervisor."""
+    next_worker = state.get("next_worker", "FINISH")
+    if next_worker in ("escalate", "FINISH"):
+        return END
+    return next_worker
 
 
 def create_incident_graph(checkpointer=None):
-    """Khởi tạo và biên dịch đồ thị xử lý sự cố 5 giai đoạn kèm cơ chế Human-in-the-Loop."""
-
-    # 1. Khởi tạo StateGraph với Schema IncidentState
+    """Khởi tạo và biên dịch đồ thị xử lý sự cố Multi-Agent SRE Swarm kèm cổng kiểm duyệt HITL."""
     workflow = StateGraph(IncidentState)
 
-    # 2. Đăng ký các Nodes vào đồ thị theo chu trình SRE 5 giai đoạn
+    # 1. Đăng ký các Nodes: Triage, Supervisor và 4 Specialist Workers + HITL Gate
     workflow.add_node("triage", triage_node)
-    workflow.add_node("mitigate", mitigate_node)
-    workflow.add_node("investigate", investigate_node)
-    workflow.add_node("tools", tool_node)
-    workflow.add_node("plan_fix", plan_fix_node)
-    workflow.add_node("execute_fix", execute_fix_node)
+    workflow.add_node("supervisor", supervisor_node)
+    workflow.add_node("remediation", remediation_worker)
+    workflow.add_node("investigator", investigator_worker)
+    workflow.add_node("patching", patching_worker)
+    workflow.add_node("hitl_gate", hitl_gate_node)
+    workflow.add_node("scribe", scribe_worker)
 
-    # 3. Thiết lập luồng thực thi (Edges)
-    # Giai đoạn 1: Tiếp nhận và phân loại độ nghiêm trọng
+    # 2. Thiết lập luồng thực thi (Edges)
     workflow.add_edge(START, "triage")
+    workflow.add_edge("triage", "supervisor")
 
-    # Giai đoạn 2: Tự động dập lửa khẩn cấp (Mitigate First)
-    workflow.add_edge("triage", "mitigate")
-
-    # Giai đoạn 3: Phân tích nguyên nhân gốc rễ (Deep RCA)
-    workflow.add_edge("mitigate", "investigate")
-
-    # Phân nhánh điều kiện: Gọi tools tra cứu log hay đã có đủ log để chuyển sang plan_fix
+    # Phân nhánh từ Supervisor tới từng Specialist Worker
     workflow.add_conditional_edges(
-        "investigate",
-        route_investigation,
+        "supervisor",
+        route_supervisor,
         {
-            "tools": "tools",
-            "plan_fix": "plan_fix",
+            "remediation": "remediation",
+            "investigator": "investigator",
+            "patching": "patching",
+            "hitl": "hitl_gate",
+            "scribe": "scribe",
+            END: END,
         },
     )
 
-    # Sau khi thực thi tool xong -> quay lại node investigate để LLM đọc kết quả
-    workflow.add_edge("tools", "investigate")
+    # Các worker báo cáo ngược về Supervisor sau khi hoàn tất nhiệm vụ
+    workflow.add_edge("remediation", "supervisor")
+    workflow.add_edge("investigator", "supervisor")
+    workflow.add_edge("patching", "hitl_gate")
+    workflow.add_edge("hitl_gate", "supervisor")
+    workflow.add_edge("scribe", END)
 
-    # Giai đoạn 4: Sau khi lập plan_fix -> chuyển sang execute_fix (Sẽ chạm Breakpoint)
-    workflow.add_edge("plan_fix", "execute_fix")
-
-    # Giai đoạn 5: Sau khi thực thi bản vá và xuất Post-Mortem -> Kết thúc
-    workflow.add_edge("execute_fix", END)
-
-    # 4. Checkpointer để lưu snapshot state (mặc định lưu bền vững vào SQLite)
+    # 3. Checkpointer để lưu snapshot state (mặc định lưu bền vững vào SQLite)
     if checkpointer is None:
         checkpointer = PersistentSqliteSaver()
 
-    # 5. Biên dịch đồ thị kèm Breakpoint ngắt TRƯỚC KHI node execute_fix chạy
+    # 4. Biên dịch đồ thị kèm Breakpoint ngắt TRƯỚC KHI hitl_gate chạy
     app = workflow.compile(
         checkpointer=checkpointer,
-        interrupt_before=["execute_fix"],
+        interrupt_before=["hitl_gate"],
     )
 
     return app
 
 
-# Đối tượng graph dùng cho module chạy trực tiếp
+# Đối tượng graph dùng cho API và background task
 incident_app = create_incident_graph()
