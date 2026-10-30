@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage
 from src.core.config import settings
 from src.agent.graph import incident_app
 from src.agent.nodes import extract_text_content
+from src.tools.telegram_client import telegram_client
 from src.api.schemas import (
     AlertWebhookPayload,
     IncidentApprovalRequest,
@@ -39,6 +40,32 @@ def run_agent_workflow_task(thread_id: str, initial_input: dict):
         logger.info(f"Tác vụ nền hoàn tất hoặc đã tạm dừng tại breakpoint cho thread: {thread_id}")
     except Exception as exc:
         logger.error(f"Lỗi trong tác vụ nền cho thread {thread_id}: {str(exc)}", exc_info=True)
+
+
+def resume_agent_workflow_task(thread_id: str, notify_telegram: bool = True):
+    """Tác vụ nền tiếp tục chạy workflow của Agent sau khi nhận phê duyệt từ xa (Telegram / API)."""
+    config = {"configurable": {"thread_id": thread_id}}
+    logger.info(f"Bắt đầu tiếp tục xử lý workflow cho thread: {thread_id}")
+    try:
+        for _ in incident_app.stream(None, config=config):
+            pass
+        logger.info(f"Workflow cho thread {thread_id} đã hoàn tất.")
+
+        if notify_telegram:
+            final_snapshot = incident_app.get_state(config)
+            if final_snapshot and final_snapshot.values:
+                status_val = final_snapshot.values.get("approval_status")
+                pr_url = final_snapshot.values.get("github_pr_url")
+                if status_val == "approved":
+                    telegram_client.send_message(
+                        f"🎉 *[SỰ CỐ `{thread_id}` ĐÃ XỬ LÝ THÀNH CÔNG]*\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        f"• *Kết quả:* Bản vá đã được mở Pull Request.\n"
+                        f"• *GitHub PR:* {pr_url or 'Simulated PR #142'}\n"
+                        f"• *Post-Mortem:* Đã tạo tự động theo chuẩn Google SRE."
+                    )
+    except Exception as exc:
+        logger.error(f"Lỗi trong tác vụ tiếp tục workflow cho thread {thread_id}: {str(exc)}", exc_info=True)
 
 
 @app.get("/", response_class=HTMLResponse, tags=["Dashboard"])
@@ -334,3 +361,108 @@ def list_incidents():
                 )
         return results
     return []
+
+
+@app.post(
+    "/telegram/webhook",
+    status_code=status.HTTP_200_OK,
+    tags=["Telegram Remote HITL"],
+)
+def handle_telegram_webhook(payload: Dict[str, Any], background_tasks: BackgroundTasks):
+    """Tiếp nhận sự kiện tương tác từ Telegram Bot (Inline Buttons Approve/Reject hoặc Text Commands)."""
+    # 1. Xử lý Callback Query khi người dùng bấm nút Inline trên Telegram
+    if "callback_query" in payload:
+        cb = payload["callback_query"]
+        cb_id = cb.get("id", "")
+        data = cb.get("data", "")
+        user = cb.get("from", {}).get("username") or cb.get("from", {}).get("first_name", "Engineer")
+        msg = cb.get("message", {})
+        chat_id = msg.get("chat", {}).get("id") or settings.TELEGRAM_CHAT_ID
+        msg_id = msg.get("message_id")
+
+        action, thread_id = data.split(":", 1) if ":" in data else (data, "")
+        config = {"configurable": {"thread_id": thread_id}}
+
+        if action == "approve":
+            snapshot = incident_app.get_state(config)
+            if not snapshot or not snapshot.values:
+                telegram_client.answer_callback_query(cb_id, text=f"Không tìm thấy sự cố {thread_id}!")
+                return {"ok": False, "error": f"Incident {thread_id} not found"}
+
+            telegram_client.answer_callback_query(cb_id, text=f"✅ Đã duyệt bởi @{user}!")
+            if msg_id and chat_id:
+                telegram_client.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=msg_id,
+                    text=(
+                        f"✅ *[ĐÃ PHÊ DUYỆT BỞI @{user}]*\n"
+                        f"Bản vá cho sự cố `{thread_id}` đã được thông qua.\n"
+                        f"Agent đang tiến hành mở Pull Request và biên soạn Post-Mortem..."
+                    ),
+                )
+            incident_app.update_state(config, {"approval_status": "approved"})
+            background_tasks.add_task(resume_agent_workflow_task, thread_id, True)
+            return {"ok": True, "action": "approved", "thread_id": thread_id, "user": user}
+
+        elif action == "reject":
+            telegram_client.answer_callback_query(cb_id, text=f"❌ Đã từ chối bởi @{user}!")
+            if msg_id and chat_id:
+                telegram_client.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=msg_id,
+                    text=(
+                        f"❌ *[ĐÃ TỪ CHỐI BỞI @{user}]*\n"
+                        f"Kế hoạch sửa đổi cho sự cố `{thread_id}` đã bị hủy bỏ bởi kỹ sư trực ban."
+                    ),
+                )
+            incident_app.update_state(config, {"approval_status": "rejected"})
+            background_tasks.add_task(resume_agent_workflow_task, thread_id, True)
+            return {"ok": True, "action": "rejected", "thread_id": thread_id, "user": user}
+
+        elif action == "status":
+            st = incident_app.get_state(config)
+            status_val = st.values.get("approval_status", "unknown") if st and st.values else "not found"
+            telegram_client.answer_callback_query(cb_id, text=f"Trạng thái {thread_id}: {status_val}")
+            return {"ok": True, "action": "status", "thread_id": thread_id, "status": status_val}
+
+    # 2. Xử lý tin nhắn văn bản thông thường / lệnh bot (Text commands)
+    if "message" in payload:
+        msg = payload["message"]
+        text = (msg.get("text") or "").strip()
+
+        if text.startswith("/status"):
+            parts = text.split()
+            if len(parts) > 1:
+                target_id = parts[1]
+                config = {"configurable": {"thread_id": target_id}}
+                st = incident_app.get_state(config)
+                if st and st.values:
+                    service = st.values.get("service_name", "N/A")
+                    sev = st.values.get("severity", "N/A")
+                    appr = st.values.get("approval_status", "N/A")
+                    mit = st.values.get("mitigation_action_taken", "None")
+                    reply_text = (
+                        f"📊 *Trạng thái sự cố `{target_id}`:*\n"
+                        f"• *Dịch vụ:* {service} ({sev})\n"
+                        f"• *Tiến độ:* `{appr}`\n"
+                        f"• *Dập lửa:* {mit}"
+                    )
+                else:
+                    reply_text = f"⚠️ Không tìm thấy sự cố `{target_id}` trong cơ sở dữ liệu."
+            else:
+                reply_text = "Cú pháp tra cứu: `/status <thread_id>`"
+            telegram_client.send_message(reply_text)
+            return {"ok": True, "command": "status", "reply": reply_text}
+
+        if text.startswith("/help") or text.startswith("/start"):
+            reply_text = (
+                "🤖 *Incident Response AI Agent - Telegram Controller*\n\n"
+                "Danh sách lệnh hỗ trợ:\n"
+                "• `/status <thread_id>`: Kiểm tra trạng thái và tiến độ xử lý của sự cố\n"
+                "• `/help`: Hiển thị thông tin trợ giúp\n\n"
+                "💡 Khi có sự cố cần can thiệp, Agent sẽ tự động gửi thông báo kèm nút [✅ Duyệt] và [❌ Từ chối] ngay tại đây!"
+            )
+            telegram_client.send_message(reply_text)
+            return {"ok": True, "command": "help", "reply": reply_text}
+
+    return {"ok": True, "message": "Ignored or unhandled update type"}

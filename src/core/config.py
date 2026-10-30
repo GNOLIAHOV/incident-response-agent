@@ -27,6 +27,11 @@ class Settings:
     GITHUB_OWNER: str = os.getenv("GITHUB_OWNER", "GNOLIAHOV")
     GITHUB_DEFAULT_REPO: str = os.getenv("GITHUB_DEFAULT_REPO", "incident-response-agent")
 
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+    TELEGRAM_ENABLED: bool = os.getenv("TELEGRAM_ENABLED", "false").lower() in ("true", "1", "yes")
+    TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+
     ROOT_DIR: Path = ROOT_DIR
     STATIC_DIR: Path = ROOT_DIR / "src" / "api" / "static"
 

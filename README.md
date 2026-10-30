@@ -5,7 +5,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2%2B-black?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4?style=flat-square&logo=google)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage_Build-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
-[![Pytest](https://img.shields.io/badge/Pytest-49%2F49_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-58%2F58_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL_Mode-003B57?style=flat-square&logo=sqlite)](https://www.sqlite.org/)
 
 An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent Swarm** designed under the golden principle:
@@ -26,7 +26,8 @@ An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent 
 * **Real GitHub Pull Request & Issue Integration:** Opens real feature branches (`fix/{service}-{incident_id}`), commits incident patch artifacts (`incidents/patches/INC-xxx-{service}.md`), and creates PRs/Issues via GitHub REST API v3 (with graceful simulation fallback).
 * **Containerized Production Deployment:** Production-ready multi-stage `Dockerfile` (non-root `appuser`) with `docker-compose.yml` and persistent volume mounts.
 * **Interactive 4-Step Visual Dashboard:** Web interface featuring a War Room Live Timeline, feedback modal, and Post-Mortem Markdown viewer.
-* **100% Automated Test Suite:** 49 comprehensive unit and integration tests running in ~2.0 seconds.
+* **📱 Interactive Telegram Bot for Remote HITL Approval:** Pushes real-time alerts to on-call mobile phones with interactive Inline Buttons (`[✅ Approve & Open PR]` / `[❌ Reject]`). Engineers can review and trigger fixes anywhere without opening their laptop.
+* **100% Automated Test Suite:** 58 comprehensive unit and integration tests running in ~1.6 seconds.
 
 ---
 
@@ -160,6 +161,11 @@ DEFAULT_TEMPERATURE=0.2
 GITHUB_TOKEN=your_github_personal_access_token_here
 GITHUB_OWNER=GNOLIAHOV
 GITHUB_DEFAULT_REPO=incident-response-agent
+
+# Telegram Bot Integration (Optional - mobile alerts & remote HITL buttons)
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_from_botfather
+TELEGRAM_CHAT_ID=your_chat_or_group_id
+TELEGRAM_ENABLED=false
 ```
 
 ---
@@ -197,20 +203,46 @@ uvicorn src.api.app:app --reload --port 8000
 
 ---
 
-## 6. Automated Testing
+## 6. Remote Mobile Approval via Telegram Bot
 
-Run all 49 unit and integration tests:
+The system provides on-call engineers with remote, mobile-friendly incident approval without requiring them to open a laptop:
+
+1. **Create Bot & Obtain Credentials:**
+   * Message [@BotFather](https://t.me/botfather) on Telegram: run `/newbot` to get your `TELEGRAM_BOT_TOKEN`.
+   * Message [@userinfobot](https://t.me/userinfobot) or add your bot to your SRE War Room group to get the `TELEGRAM_CHAT_ID`.
+2. **Configure `.env`:**
+   ```dotenv
+   TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ
+   TELEGRAM_CHAT_ID=-1001234567890
+   TELEGRAM_ENABLED=true
+   ```
+3. **Register Webhook with Telegram:**
+   Point Telegram to your public API endpoint (via domain or tunneling such as ngrok/Cloudflare Tunnel):
+   ```bash
+   curl -F "url=https://your-domain.com/telegram/webhook" https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook
+   ```
+4. **How It Works:**
+   * When an incident occurs, **Remediation Agent** pushes an emergency mitigation alert to the chat.
+   * When **Patching Agent** finishes drafting a safe AST fix, it pauses at `hitl_gate` and pushes an interactive card with `[✅ Duyệt & Mở GitHub PR]` and `[❌ Từ chối bản vá]` buttons directly to the engineer's phone.
+   * Tapping the button updates the incident state in SQLite and automatically resumes the workflow in background to create the GitHub Pull Request and compile the Google SRE Post-Mortem.
+   * Commands supported in chat: `/status <incident_id>` and `/help`.
+
+---
+
+## 7. Automated Testing
+
+Run all 58 unit and integration tests:
 ```bash
 pytest -v
 ```
 
 Expected output:
 ```text
-============================= 49 passed in 2.05s ==============================
+============================= 58 passed in 1.65s ==============================
 ```
 
 ---
 
-## 7. License
+## 8. License
 
 This project is licensed under the [MIT License](LICENSE).

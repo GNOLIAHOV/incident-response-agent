@@ -21,6 +21,7 @@ from src.tools.postmortem_tools import (
     create_github_prevention_issue,
     generate_google_sre_postmortem,
 )
+from src.tools.telegram_client import telegram_client
 
 
 def get_current_time_str() -> str:
@@ -62,6 +63,17 @@ def remediation_worker(state: IncidentState) -> dict:
             "action_taken": rem_res.get("message", f"Executed {action_type}"),
         }
     )
+
+    # Gửi cảnh báo khẩn cấp lên Telegram On-Call
+    try:
+        telegram_client.send_incident_alert(
+            incident_id=incident_id,
+            service_name=service_name,
+            severity=severity,
+            action_taken=rem_res.get("message", f"Executed {action_type}"),
+        )
+    except Exception:
+        pass
 
     now = get_current_time_str()
     timeline.append(
@@ -123,6 +135,7 @@ def investigator_worker(state: IncidentState) -> dict:
 def patching_worker(state: IncidentState) -> dict:
     """🛠️ Patching Agent: Tổng hợp mã nguồn bản vá an toàn và tiếp thu ý kiến phản hồi khi bị từ chối."""
     service_name = state.get("service_name", "app_service")
+    incident_id = state.get("incident_id", "INC-UNKNOWN")
     rca_summary = state.get("investigation_summary", "")
     reviewer_feedback = state.get("reviewer_feedback")
     timeline = list(state.get("timeline") or [])
@@ -202,6 +215,17 @@ def patching_worker(state: IncidentState) -> dict:
             "stage": "governance",
         }
     )
+
+    # Gửi thẻ yêu cầu phê duyệt kèm nút bấm Inline lên Telegram
+    try:
+        telegram_client.send_approval_request(
+            incident_id=incident_id,
+            service_name=service_name,
+            severity=state.get("severity", "P2"),
+            fix_summary=proposed_content,
+        )
+    except Exception:
+        pass
 
     return {
         "proposed_fix": proposed_content,
@@ -305,6 +329,16 @@ def scribe_worker(state: IncidentState) -> dict:
         mttd_seconds=30,
         mttr_seconds=120,
     )
+
+    try:
+        telegram_client.send_message(
+            f"🎉 *[HOÀN TẤT XỬ LÝ SỰ CỐ `{incident_id}`]*\n"
+            f"• *Dịch vụ:* `{service_name}`\n"
+            f"• *Pull Request:* {github_pr_url}\n"
+            f"• *Post-Mortem:* Đã tạo tự động theo chuẩn Google SRE."
+        )
+    except Exception:
+        pass
 
     return {
         "messages": [AIMessage(content=f"Đã hoàn thành: {pr_result}")],
