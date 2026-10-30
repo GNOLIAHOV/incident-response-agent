@@ -1,196 +1,431 @@
 <!DOCTYPE html>
-    <html lang="vi">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Incident Response AI Agent Dashboard</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="bg-slate-900 text-slate-100 min-h-screen py-10 px-4">
-        <div class="max-w-4xl mx-auto bg-slate-800 rounded-xl shadow-2xl border border-slate-700 p-8">
-            <h1 class="text-2xl font-bold text-center text-blue-400 mb-2">Autonomous Incident Response Agent</h1>
-            <p class="text-center text-slate-400 text-sm mb-8">Trực quan hóa quy trình AI điều tra sự cố & Phê duyệt Human-in-the-Loop</p>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous SRE Incident Response Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen py-8 px-4 font-sans">
+    <div class="max-w-5xl mx-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-6 md:p-8">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row items-center justify-between border-b border-slate-800 pb-6 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-xl font-bold">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                        Autonomous SRE Incident Platform
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v2.0 Production</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Tự động tiếp nhận Alert ➔ Dập lửa khẩn cấp (Mitigate First) ➔ RCA & Sửa code ➔ Duyệt HITL ➔ Post-Mortem</p>
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0 flex gap-2">
+                <button onclick="switchTab('manual')" id="tab-btn-manual" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white transition-all">
+                    <i class="fa-solid fa-keyboard mr-1"></i> Báo cáo thủ công
+                </button>
+                <button onclick="switchTab('webhook')" id="tab-btn-webhook" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-satellite-dish mr-1"></i> Giả lập Prometheus Webhook
+                </button>
+            </div>
+        </div>
 
-            <!-- Thanh tien trinh 3 buoc -->
-            <div class="flex items-center justify-between mb-8 relative">
-                <div class="w-full absolute top-1/2 h-1 bg-slate-700 -z-0"></div>
-                
-                <!-- Buoc 1 -->
-                <div class="flex flex-col items-center relative z-10">
-                    <div id="step-1-badge" class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg transition-all">1</div>
-                    <span id="step-1-label" class="text-xs font-semibold text-blue-400 mt-2">Báo cáo sự cố</span>
+        <!-- Thanh tiến trình 4 giai đoạn -->
+        <div class="flex items-center justify-between mb-8 relative max-w-3xl mx-auto">
+            <div class="w-full absolute top-1/2 h-1 bg-slate-800 -z-0"></div>
+            
+            <div class="flex flex-col items-center relative z-10">
+                <div id="step-1-badge" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-500/20 transition-all">1</div>
+                <span id="step-1-label" class="text-xs font-semibold text-blue-400 mt-2">Alert & Triage</span>
+            </div>
+
+            <div class="flex flex-col items-center relative z-10">
+                <div id="step-2-badge" class="w-10 h-10 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm shadow-lg transition-all">2</div>
+                <span id="step-2-label" class="text-xs font-semibold text-slate-400 mt-2">Dập lửa & RCA</span>
+            </div>
+
+            <div class="flex flex-col items-center relative z-10">
+                <div id="step-3-badge" class="w-10 h-10 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm shadow-lg transition-all">3</div>
+                <span id="step-3-label" class="text-xs font-semibold text-slate-400 mt-2">Duyệt HITL & Góp ý</span>
+            </div>
+
+            <div class="flex flex-col items-center relative z-10">
+                <div id="step-4-badge" class="w-10 h-10 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm shadow-lg transition-all">4</div>
+                <span id="step-4-label" class="text-xs font-semibold text-slate-400 mt-2">PR & Post-Mortem</span>
+            </div>
+        </div>
+
+        <!-- Khung Bước 1: Tiếp nhận sự cố -->
+        <div id="panel-step-1" class="space-y-4">
+            <!-- Form thủ công -->
+            <div id="form-manual" class="bg-slate-800/40 p-5 rounded-xl border border-slate-700/60 space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Dịch vụ gặp sự cố (Microservice):</label>
+                    <select id="service-name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="auth_service">auth_service (Lỗi logic 500 TypeError verify_jwt)</option>
+                        <option value="payment_service">payment_service (Lỗi mạng timeout kết nối cổng thanh toán 3000ms)</option>
+                        <option value="inventory_service">inventory_service (Lỗi deadlock khi flash sale đạt 12,000 req/s)</option>
+                    </select>
                 </div>
 
-                <!-- Buoc 2 -->
-                <div class="flex flex-col items-center relative z-10">
-                    <div id="step-2-badge" class="w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold shadow-lg transition-all">2</div>
-                    <span id="step-2-label" class="text-xs font-semibold text-slate-400 mt-2">Duyệt bản vá</span>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Mô tả triệu chứng hoặc Stack Trace:</label>
+                    <textarea id="issue-desc" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">Service liên tục quăng mã lỗi 500 khi người dùng thực hiện giao dịch</textarea>
                 </div>
 
-                <!-- Buoc 3 -->
-                <div class="flex flex-col items-center relative z-10">
-                    <div id="step-3-badge" class="w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold shadow-lg transition-all">3</div>
-                    <span id="step-3-label" class="text-xs font-semibold text-slate-400 mt-2">Hoàn tất & PR</span>
+                <button id="btn-trigger" onclick="triggerIncidentManual()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> Bắt đầu Chu trình Tự trị SRE (Start Incident)
+                </button>
+            </div>
+
+            <!-- Form giả lập Prometheus Webhook -->
+            <div id="form-webhook" class="hidden bg-slate-800/40 p-5 rounded-xl border border-slate-700/60 space-y-3">
+                <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                    <span>Mô phỏng JSON Payload bắn vào endpoint <code>POST /alerts/webhook</code>:</span>
+                    <span class="text-emerald-400 font-mono">Prometheus Alertmanager v0.27</span>
+                </div>
+                <textarea id="webhook-payload" rows="6" class="w-full font-mono bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-emerald-400 focus:outline-none focus:border-blue-500">{
+  "status": "firing",
+  "alerts": [
+    {
+      "labels": {
+        "alertname": "AuthServiceCrashLoop",
+        "service": "auth_service",
+        "severity": "critical"
+      },
+      "annotations": {
+        "description": "Continuous TypeError in verify_jwt(): 'NoneType' object is not subscriptable at line 42",
+        "summary": "500 Error rate exceeded 45% threshold"
+      }
+    }
+  ]
+}</textarea>
+                <button onclick="triggerIncidentWebhook()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-all shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> Bắn Webhook Alert vào Hệ thống
+                </button>
+            </div>
+        </div>
+
+        <!-- Trạng thái Loading / Polling -->
+        <div id="loading-spinner" class="hidden my-8 text-center p-6 bg-slate-800/30 rounded-xl border border-slate-800">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2"></div>
+            <p id="loading-text" class="text-sm text-blue-300 font-medium">Agent đang phân loại sự cố và thực hiện dập lửa khẩn cấp...</p>
+        </div>
+
+        <!-- War Room Live Timeline Banner (Hiển thị xuyên suốt khi có sự cố) -->
+        <div id="war-room-panel" class="hidden my-6 bg-slate-800/60 border border-slate-700 rounded-xl p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                <div class="flex items-center gap-2">
+                    <span id="badge-severity" class="px-2.5 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">P1 - CRITICAL</span>
+                    <span id="badge-service" class="font-mono text-sm font-bold text-white">auth_service</span>
+                </div>
+                <span id="war-room-thread-id" class="text-xs text-slate-400 font-mono"></span>
+            </div>
+
+            <!-- Hành động dập lửa khẩn cấp -->
+            <div id="mitigation-banner" class="flex items-center gap-3 p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg text-xs text-emerald-300">
+                <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+                <div>
+                    <span class="font-bold">Hành động dập lửa khẩn cấp (Mitigate First):</span>
+                    <span id="mitigation-action-text" class="ml-1">Đang thực thi...</span>
                 </div>
             </div>
 
-            <!-- Khung Buoc 1 -->
-            <div id="panel-step-1" class="space-y-4">
-                <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
-                    <label class="block text-sm font-medium mb-1">Tên Service:</label>
-                    <input type="text" id="service-name" value="payment_service" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
-                    
-                    <label class="block text-sm font-medium mt-3 mb-1">Mô tả sự cố:</label>
-                    <textarea id="issue-desc" rows="2" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">Khách thanh toán bị treo và báo lỗi timeout sau 3 giây</textarea>
+            <!-- Dòng thời gian Timeline -->
+            <div>
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">SRE Incident Timeline:</span>
+                <div id="timeline-list" class="space-y-1.5 max-h-40 overflow-y-auto font-mono text-xs text-slate-300 bg-slate-950/60 p-3 rounded-lg border border-slate-800">
+                </div>
+            </div>
+        </div>
 
-                    <button id="btn-trigger" onclick="triggerIncident()" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 font-semibold py-2.5 rounded text-sm transition-all shadow-md">
-                        Bắt đầu điều tra sự cố (Bước 1)
+        <!-- Khung Bước 3: Duyệt bản vá & Góp ý (Human-in-the-Loop) -->
+        <div id="panel-step-3" class="hidden space-y-4">
+            <div class="bg-slate-800/60 p-5 rounded-xl border border-amber-500/40 space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-hand"></i> Human-in-the-Loop Breakpoint: Đang chờ kỹ sư phê duyệt
+                    </span>
+                    <span class="text-xs text-slate-400">Bản vá mã nguồn do Gemini tổng hợp</span>
+                </div>
+
+                <pre id="proposed-fix-content" class="bg-slate-950 p-4 rounded-lg text-xs font-mono text-slate-200 overflow-x-auto max-h-72 border border-slate-800 whitespace-pre-wrap"></pre>
+
+                <!-- Box góp ý phản hồi cho Agent -->
+                <div id="feedback-box" class="hidden bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
+                    <label class="block text-xs font-semibold text-amber-300">Nhập chỉ đạo góp ý để Agent điều chỉnh lại bản vá (Human Feedback Loop):</label>
+                    <textarea id="reviewer-feedback-input" rows="2" placeholder="Ví dụ: Đừng dùng try-except, hãy dùng dict.get('user_id') với giá trị fallback an toàn..." class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="cancelFeedback()" class="px-3 py-1 text-xs rounded bg-slate-800 text-slate-300 hover:text-white">Hủy</button>
+                        <button onclick="submitApprovalWithFeedback()" class="px-4 py-1.5 text-xs font-semibold rounded bg-amber-600 hover:bg-amber-500 text-white">Gửi góp ý & Yêu cầu làm lại</button>
+                    </div>
+                </div>
+
+                <div id="approval-actions" class="flex gap-3 pt-2">
+                    <button onclick="submitApproval(true)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-all shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Duyệt bản vá & Tạo Pull Request
                     </button>
-                </div>
-            </div>
-
-            <!-- Trạng thái Loading / Polling -->
-            <div id="loading-spinner" class="hidden my-8 text-center">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2"></div>
-                <p id="loading-text" class="text-sm text-blue-300 font-medium">Agent đang truy vấn log và phân tích lỗi ngầm...</p>
-            </div>
-
-            <!-- Khung Buoc 2 -->
-            <div id="panel-step-2" class="hidden space-y-4">
-                <div class="bg-slate-700/50 p-4 rounded-lg border border-yellow-600/50">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-semibold text-yellow-400">Breakpoint: Agent đang chờ con người phê duyệt</span>
-                        <span id="display-thread-id" class="text-xs text-slate-400 font-mono"></span>
-                    </div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Bản phân tích lỗi & Code vá do Gemini đề xuất:</label>
-                    <pre id="proposed-fix-content" class="bg-slate-900 p-4 rounded text-xs text-slate-200 overflow-x-auto max-h-80 border border-slate-700 whitespace-pre-wrap"></pre>
-
-                    <div class="flex gap-4 mt-4">
-                        <button onclick="submitApproval(true)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-semibold py-2.5 rounded text-sm transition-all shadow-md">
-                            Duyệt bản vá & Tạo PR (Approve)
-                        </button>
-                        <button onclick="submitApproval(false)" class="flex-1 bg-rose-600 hover:bg-rose-500 font-semibold py-2.5 rounded text-sm transition-all shadow-md">
-                            Từ chối bản vá (Reject)
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Khung Buoc 3 -->
-            <div id="panel-step-3" class="hidden space-y-4">
-                <div class="bg-slate-700/50 p-6 rounded-lg border border-emerald-600/50 text-center">
-                    <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center text-xl mb-3">✓</div>
-                    <h3 class="text-lg font-bold text-emerald-400 mb-2">Quy trình đã hoàn tất!</h3>
-                    <p id="final-output-content" class="text-sm text-slate-300 bg-slate-900 p-4 rounded border border-slate-700 text-left"></p>
-                    <button onclick="resetFlow()" class="mt-6 bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2 px-6 rounded text-sm transition-all">
-                        Thử nghiệm ca mới
+                    <button onclick="toggleFeedbackBox()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-all shadow-md shadow-amber-600/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-comments"></i> Góp ý phản hồi (Feedback Loop)
+                    </button>
+                    <button onclick="submitApproval(false)" class="px-4 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-lg text-sm transition-all">
+                        <i class="fa-solid fa-xmark"></i> Hủy
                     </button>
                 </div>
             </div>
         </div>
 
-        <script>
-            let currentThreadId = "";
-            let pollTimer = null;
+        <!-- Khung Bước 4: Hoàn tất & Báo cáo Post-Mortem -->
+        <div id="panel-step-4" class="hidden space-y-4">
+            <div class="bg-slate-800/60 p-6 rounded-xl border border-emerald-500/40 text-left space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg font-bold">✓</div>
+                        <div>
+                            <h3 class="text-base font-bold text-emerald-400">Sự cố đã được giải quyết hoàn tất!</h3>
+                            <p class="text-xs text-slate-400">Đã mở Pull Request trên GitHub và tự động xuất báo cáo Google SRE Post-Mortem.</p>
+                        </div>
+                    </div>
+                    <button onclick="resetFlow()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-all">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Xử lý ca mới
+                    </button>
+                </div>
 
-            async function triggerIncident() {
-                const serviceName = document.getElementById("service-name").value;
-                const issueDesc = document.getElementById("issue-desc").value;
-                currentThreadId = "WEB-TEST-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+                <!-- Báo cáo Post-Mortem Markdown -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold uppercase text-slate-400">Báo cáo Google SRE Incident Post-Mortem:</span>
+                        <button onclick="copyPostMortem()" class="text-xs text-blue-400 hover:text-blue-300 font-semibold">
+                            <i class="fa-regular fa-copy mr-1"></i> Sao chép Markdown
+                        </button>
+                    </div>
+                    <pre id="post-mortem-content" class="bg-slate-950 p-4 rounded-lg text-xs font-mono text-slate-200 overflow-x-auto max-h-96 border border-slate-800 whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                document.getElementById("btn-trigger").disabled = true;
-                document.getElementById("loading-spinner").classList.remove("hidden");
-                document.getElementById("loading-text").innerText = "Đang gửi sự cố tới Agent...";
+    <script>
+        let currentThreadId = "";
+        let pollTimer = null;
 
-                try {
-                    const res = await fetch("/incidents/trigger", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            service_name: serviceName,
-                            issue_description: issueDesc,
-                            thread_id: currentThreadId
-                        })
-                    });
-
-                    if (!res.ok) throw new Error("Lỗi khi trigger incident");
-
-                    document.getElementById("loading-text").innerText = "Agent đang điều tra log và tạo bản vá (khoảng 5-10 giây)...";
-                    
-                    // Bat dau polling kiem tra tien do
-                    pollTimer = setInterval(checkStatus, 2000);
-                } catch (err) {
-                    alert("Có lỗi: " + err.message);
-                    document.getElementById("btn-trigger").disabled = false;
-                    document.getElementById("loading-spinner").classList.add("hidden");
-                }
+        function switchTab(mode) {
+            if (mode === 'manual') {
+                document.getElementById('form-manual').classList.remove('hidden');
+                document.getElementById('form-webhook').classList.add('hidden');
+                document.getElementById('tab-btn-manual').className = "text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white transition-all";
+                document.getElementById('tab-btn-webhook').className = "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all";
+            } else {
+                document.getElementById('form-manual').classList.add('hidden');
+                document.getElementById('form-webhook').classList.remove('hidden');
+                document.getElementById('tab-btn-webhook').className = "text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 text-white transition-all";
+                document.getElementById('tab-btn-manual').className = "text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all";
             }
+        }
 
-            async function checkStatus() {
-                try {
-                    const res = await fetch(`/incidents/${currentThreadId}/status`);
-                    if (!res.ok) return;
-                    const data = await res.json();
+        async function triggerIncidentManual() {
+            const serviceName = document.getElementById("service-name").value;
+            const issueDesc = document.getElementById("issue-desc").value;
+            currentThreadId = "SRE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-                    // Chi chuyen sang buoc 2 khi Agent thuc su den breakpoint cua execute_fix va da co noi dung ban va
-                    if (data.status === "paused_at_breakpoint" && data.proposed_fix) {
-                        clearInterval(pollTimer);
-                        document.getElementById("loading-spinner").classList.add("hidden");
-                        
-                        // Cap nhat badge buoc
-                        document.getElementById("step-1-badge").className = "w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg";
-                        document.getElementById("step-1-badge").innerHTML = "✓";
-                        document.getElementById("step-2-badge").className = "w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg";
-                        document.getElementById("step-2-label").className = "text-xs font-semibold text-blue-400 mt-2";
+            startWorkflow(async () => {
+                return await fetch("/incidents/trigger", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        service_name: serviceName,
+                        issue_description: issueDesc,
+                        thread_id: currentThreadId
+                    })
+                });
+            });
+        }
 
-                        // Hien thi panel buoc 2
-                        document.getElementById("panel-step-1").classList.add("hidden");
-                        document.getElementById("panel-step-2").classList.remove("hidden");
-                        document.getElementById("display-thread-id").innerText = "Thread: " + currentThreadId;
-                        document.getElementById("proposed-fix-content").innerText = data.proposed_fix;
-                    }
-                } catch (err) {
-                    console.error("Loi khi polling status:", err);
-                }
+        async function triggerIncidentWebhook() {
+            const payloadRaw = document.getElementById("webhook-payload").value;
+            startWorkflow(async () => {
+                const res = await fetch("/alerts/webhook", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: payloadRaw
+                });
+                const data = await res.json();
+                currentThreadId = data.thread_id;
+                return { ok: true };
+            });
+        }
+
+        async function startWorkflow(fetchFn) {
+            document.getElementById("btn-trigger").disabled = true;
+            document.getElementById("loading-spinner").classList.remove("hidden");
+            document.getElementById("loading-text").innerText = "Agent đang tiếp nhận alert, tự động dập lửa và chẩn đoán log...";
+
+            try {
+                const res = await fetchFn();
+                if (!res.ok) throw new Error("Lỗi khi gửi sự cố tới Agent");
+
+                // Hiển thị khung War Room
+                document.getElementById("war-room-panel").classList.remove("hidden");
+                document.getElementById("war-room-thread-id").innerText = "ID: " + currentThreadId;
+
+                pollTimer = setInterval(checkStatus, 2000);
+            } catch (err) {
+                alert("Lỗi: " + err.message);
+                document.getElementById("btn-trigger").disabled = false;
+                document.getElementById("loading-spinner").classList.add("hidden");
             }
+        }
 
-            async function submitApproval(isApproved) {
-                document.getElementById("panel-step-2").classList.add("hidden");
-                document.getElementById("loading-spinner").classList.remove("hidden");
-                document.getElementById("loading-text").innerText = isApproved ? "Đang tiếp tục thực thi tạo Pull Request..." : "Đang hủy thao tác...";
+        async function checkStatus() {
+            try {
+                const res = await fetch(`/incidents/${currentThreadId}/status`);
+                if (!res.ok) return;
+                const data = await res.json();
 
-                try {
-                    const res = await fetch(`/incidents/${currentThreadId}/approve`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ approved: isApproved })
-                    });
+                // Cập nhật thông tin War Room
+                if (data.severity) {
+                    const sevEl = document.getElementById("badge-severity");
+                    sevEl.innerText = `${data.severity} - ${data.severity === 'P1' ? 'CRITICAL' : 'HIGH'}`;
+                    sevEl.className = data.severity === 'P1' 
+                        ? "px-2.5 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                        : "px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                }
+                if (data.service_name) {
+                    document.getElementById("badge-service").innerText = data.service_name;
+                }
+                if (data.mitigation_action_taken) {
+                    document.getElementById("mitigation-action-text").innerText = data.mitigation_action_taken;
+                }
 
-                    if (!res.ok) throw new Error("Lỗi khi gửi phê duyệt");
-                    const data = await res.json();
+                // Render Timeline
+                if (data.timeline && data.timeline.length > 0) {
+                    const timelineEl = document.getElementById("timeline-list");
+                    timelineEl.innerHTML = data.timeline.map(t => 
+                        `<div><span class="text-blue-400 font-semibold">[${t.stage.toUpperCase()}]</span> <span class="text-slate-400">${t.time}</span>: ${t.event}</div>`
+                    ).join("");
+                }
 
+                // Chạm Breakpoint
+                if (data.status === "paused_at_breakpoint" && data.proposed_fix) {
+                    clearInterval(pollTimer);
                     document.getElementById("loading-spinner").classList.add("hidden");
 
-                    // Cap nhat badge buoc 3
-                    document.getElementById("step-2-badge").className = "w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg";
-                    document.getElementById("step-2-badge").innerHTML = "✓";
-                    document.getElementById("step-3-badge").className = "w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg";
-                    document.getElementById("step-3-badge").innerHTML = "✓";
-                    document.getElementById("step-3-label").className = "text-xs font-semibold text-emerald-400 mt-2";
+                    // Cập nhật tiến trình
+                    updateBadges(3);
 
-                    // Hien thi panel ket qua
+                    document.getElementById("panel-step-1").classList.add("hidden");
                     document.getElementById("panel-step-3").classList.remove("hidden");
-                    document.getElementById("final-output-content").innerText = data.final_output;
-                } catch (err) {
-                    alert("Có lỗi: " + err.message);
-                    document.getElementById("panel-step-2").classList.remove("hidden");
-                    document.getElementById("loading-spinner").classList.add("hidden");
+                    document.getElementById("proposed-fix-content").innerText = data.proposed_fix;
                 }
+            } catch (err) {
+                console.error("Lỗi polling status:", err);
+            }
+        }
+
+        function toggleFeedbackBox() {
+            document.getElementById("feedback-box").classList.toggle("hidden");
+        }
+
+        function cancelFeedback() {
+            document.getElementById("feedback-box").classList.add("hidden");
+        }
+
+        async function submitApprovalWithFeedback() {
+            const feedbackText = document.getElementById("reviewer-feedback-input").value.trim();
+            if (!feedbackText) {
+                alert("Vui lòng nhập nội dung góp ý cho Agent!");
+                return;
             }
 
-            function resetFlow() {
-                location.reload();
+            document.getElementById("panel-step-3").classList.add("hidden");
+            document.getElementById("loading-spinner").classList.remove("hidden");
+            document.getElementById("loading-text").innerText = "Agent đang tiếp nhận góp ý và tinh chỉnh lại bản vá...";
+
+            try {
+                const res = await fetch(`/incidents/${currentThreadId}/approve`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ approved: false, feedback: feedbackText })
+                });
+
+                if (!res.ok) throw new Error("Lỗi khi gửi góp ý");
+                document.getElementById("reviewer-feedback-input").value = "";
+                document.getElementById("feedback-box").classList.add("hidden");
+
+                // Tiếp tục polling chờ Agent sửa xong bản vá mới
+                pollTimer = setInterval(checkStatus, 2000);
+            } catch (err) {
+                alert("Lỗi: " + err.message);
+                document.getElementById("panel-step-3").classList.remove("hidden");
+                document.getElementById("loading-spinner").classList.add("hidden");
             }
-        </script>
-    </body>
-    </html>
+        }
+
+        async function submitApproval(isApproved) {
+            document.getElementById("panel-step-3").classList.add("hidden");
+            document.getElementById("loading-spinner").classList.remove("hidden");
+            document.getElementById("loading-text").innerText = isApproved ? "Đang mở PR trên GitHub và xuất báo cáo Google SRE Post-Mortem..." : "Đang hủy thao tác...";
+
+            try {
+                const res = await fetch(`/incidents/${currentThreadId}/approve`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ approved: isApproved })
+                });
+
+                if (!res.ok) throw new Error("Lỗi khi gửi phê duyệt");
+                const data = await res.json();
+
+                document.getElementById("loading-spinner").classList.add("hidden");
+
+                updateBadges(4);
+                document.getElementById("panel-step-4").classList.remove("hidden");
+
+                // Lấy báo cáo Post-Mortem
+                if (data.post_mortem_report) {
+                    document.getElementById("post-mortem-content").innerText = data.post_mortem_report;
+                } else {
+                    document.getElementById("post-mortem-content").innerText = data.final_output;
+                }
+            } catch (err) {
+                alert("Lỗi: " + err.message);
+                document.getElementById("panel-step-3").classList.remove("hidden");
+                document.getElementById("loading-spinner").classList.add("hidden");
+            }
+        }
+
+        function updateBadges(step) {
+            for (let i = 1; i <= 4; i++) {
+                const badge = document.getElementById(`step-${i}-badge`);
+                const label = document.getElementById(`step-${i}-label`);
+                if (i < step) {
+                    badge.className = "w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-emerald-500/20";
+                    badge.innerHTML = "✓";
+                    label.className = "text-xs font-semibold text-emerald-400 mt-2";
+                } else if (i === step) {
+                    badge.className = "w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-500/20";
+                    label.className = "text-xs font-semibold text-blue-400 mt-2";
+                } else {
+                    badge.className = "w-10 h-10 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-sm shadow-lg";
+                    label.className = "text-xs font-semibold text-slate-400 mt-2";
+                }
+            }
+        }
+
+        function copyPostMortem() {
+            const content = document.getElementById("post-mortem-content").innerText;
+            navigator.clipboard.writeText(content).then(() => {
+                alert("Đã sao chép nội dung báo cáo Post-Mortem vào bộ nhớ tạm!");
+            });
+        }
+
+        function resetFlow() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
