@@ -43,7 +43,7 @@ export default function IncidentsHubPage() {
     (i) => i.status === "completed" || i.status === "approved"
   );
 
-  const primaryActive = activeIncidents[0] || incidents[0];
+  const primaryActive = activeIncidents[0] || null;
 
   return (
     <div className="space-y-6">
@@ -87,8 +87,8 @@ export default function IncidentsHubPage() {
         </div>
       </div>
 
-      {/* Prominent Active War Room Banner if an incident is in-flight */}
-      {primaryActive && (
+      {/* Prominent Active War Room Banner if an incident is in-flight, else calm status */}
+      {primaryActive ? (
         <div className="rounded-xl bg-surface-900 border border-indigo-500/30 p-4 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
@@ -119,6 +119,22 @@ export default function IncidentsHubPage() {
                 <span>Enter Command Center</span>
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-surface-900 border border-emerald-500/20 p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-white">
+                All Systems Operational • Zero Active Incidents
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                All recorded incidents in SQLite checkpointer have been autonomously resolved. LangGraph SRE Swarm is standing by.
+              </p>
             </div>
           </div>
         </div>
