@@ -8,7 +8,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2%2B-black?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4?style=flat-square&logo=google)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage_Build-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
-[![Pytest](https://img.shields.io/badge/Pytest-59%2F59_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-61%2F61_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL_Mode-003B57?style=flat-square&logo=sqlite)](https://www.sqlite.org/)
 
 An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent Swarm** designed under the golden principle:
@@ -28,12 +28,13 @@ An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent 
 * **Persistent SQLite Checkpointing (`PersistentSqliteSaver`):** Checkpoints active graph state and breakpoints into a local SQLite database (`data/incidents.db`) with WAL mode, surviving process reloads and container restarts.
 * **Real GitHub Pull Request & Issue Integration:** Opens real feature branches (`fix/{service}-{incident_id}`), commits incident patch artifacts (`incidents/patches/INC-xxx-{service}.md`), and creates PRs/Issues via GitHub REST API v3 (with graceful simulation fallback).
 * **Containerized Production Deployment:** Production-ready multi-stage `Dockerfile` (non-root `appuser`) with `docker-compose.yml` and persistent volume mounts.
-* **Interactive 4-Step Visual Dashboard & Enterprise SRE Web Portal (Next.js 14):**
+* **Enterprise SRE Web Portal (Next.js 14 App Router):**
   - **Executive CTO Dashboard (`/`):** Real-time monitoring of 4 Golden SRE Metrics (MTTR ~28s, MTTD ~6s, 99.99% SLA, 92.4% Autonomous Resolution), Microservices Swarm Health Map, and 1-click Emergency Simulator.
-  - **War Room Command Center (`/incidents/[id]`):** Live state transitions across Swarm stages, syntax-highlighted unified diffs with Python AST Safe verification badges, and dual-channel HITL approval actions.
+  - **Autonomous Incident Stream (`/incidents`):** Checkpointed incident table with P0–P3 severity filters, live execution state badges, full-text thread search, and active war room banners.
+  - **War Room Command Center (`/incidents/[id]`):** Live state transitions across 6 Swarm stages, syntax-highlighted unified diffs with Python AST Safe verification badges, and dual-channel HITL approval actions (Approve, Feedback/Revise, Reject, Escalation Override).
   - **Google SRE Post-Mortem Knowledge Base (`/post-mortems`):** Searchable blameless post-mortem catalog with 5 Whys deduction, timeline graphs, and 1-click Markdown / PDF export.
 * **📱 Interactive Telegram Bot for Remote HITL Approval:** Pushes real-time alerts to on-call mobile phones with interactive Inline Buttons (`[✅ Approve & Open PR]` / `[❌ Reject]`). Engineers can review and trigger fixes anywhere without opening their laptop.
-* **100% Automated Test Suite:** 59 comprehensive unit and integration tests running in ~2.0 seconds.
+* **100% Automated Test Suite:** 61 comprehensive unit and integration tests running in ~2.8 seconds.
 
 ---
 
@@ -46,7 +47,7 @@ An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent 
 ┌───────────────────────────────────────────────────────────────────────────────┐
 │ Stage 0: INGESTION & TRIAGE (Node: triage_node)                               │
 │  ├── Parse alert payload (service, error_type, metrics, stack trace)          │
-│  └── Classify Severity: P1-Critical / P2-High / P3-Medium                     │
+│  └── Classify Severity: P0-Critical / P1-High / P2-Medium / P3-Low            │
 └──────────────────────────────────────┬────────────────────────────────────────┘
                                        │
                                        ▼
@@ -94,6 +95,7 @@ incident-response-agent/
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── page.tsx          # Executive CTO Dashboard (Golden Metrics, Service Map)
+│   │   │   ├── incidents/        # Autonomous Incident Stream Hub (Filters, Checkpoints)
 │   │   │   ├── incidents/[id]/   # War Room Command Center (Swarm Timeline, AST Patch, HITL)
 │   │   │   └── post-mortems/     # Google SRE Post-Mortem Catalog & Report Reader
 │   │   ├── components/           # UI Components (MetricCard, IncidentTable, HITLActionBar)
@@ -101,7 +103,7 @@ incident-response-agent/
 │   ├── Dockerfile                # Production Next.js multi-stage container build
 │   └── package.json
 ├── Dockerfile                    # Multi-stage production container build (FastAPI backend)
-├── docker-compose.yml            # Multi-container orchestration (Backend: 8000, Frontend: 3000)
+├── docker-compose.yml            # Multi-container orchestration (Backend: 8000, Frontend: 3002)
 ├── .env.example                  # Enterprise configuration template for customers
 ├── .dockerignore                 # Excluded directories and artifacts
 ├── deploy/                       # Enterprise In-VPC deployment manifests
@@ -116,7 +118,12 @@ incident-response-agent/
 │           ├── 2026-10-30-autonomous-sre-engine.md
 │           ├── 2026-10-30-dockerization-and-github-pr-integration.md
 │           └── 2026-10-30-multi-agent-sre-swarm.md
-├── scripts/                      # Diagnostic and helper scripts
+├── scripts/                      # Diagnostic utilities & background daemons
+│   ├── telegram_bot_runner.py    # Telegram Bot long-polling daemon for remote HITL
+│   ├── trigger_live_demo.py      # Script to simulate emergency incidents
+│   ├── test_github_token.py      # GitHub token validation utility
+│   ├── test_live_telegram.py     # Telegram connection test utility
+│   └── check_models.py           # Google Gemini models discovery
 ├── src/
 │   ├── core/                     # Central configuration management
 │   │   ├── __init__.py
@@ -142,9 +149,9 @@ incident-response-agent/
 │   │   ├── mitigation_tools.py   # restart_container, rollback_deployment, apply_traffic_shedding
 │   │   ├── communication_tools.py # post_war_room_alert, generate_war_room_card
 │   │   └── postmortem_tools.py   # generate_google_sre_postmortem, create_github_prevention_issue
-│   ├── __init__.py
-│   └── main.py                   # Module entrypoint delegate
-├── tests/                        # 49 unit and integration tests
+│   └── __init__.py
+├── tests/                        # 61 unit and integration tests (100% passing)
+│   ├── conftest.py               # Database isolation & test cleanup fixture
 │   ├── test_agent.py
 │   ├── test_communication_tools.py
 │   ├── test_github_client.py
@@ -153,8 +160,9 @@ incident-response-agent/
 │   ├── test_sre_api.py
 │   ├── test_sre_workflow.py
 │   ├── test_state_and_persistence.py
-│   └── test_swarm.py             # Multi-Agent Swarm unit and lifecycle tests
-├── .env                          # Local environment variables (API keys & Tokens)
+│   ├── test_swarm.py             # Multi-Agent Swarm unit and lifecycle tests
+│   └── test_telegram_client.py   # Telegram Bot webhook & HITL callback tests
+├── .env.example                  # Enterprise configuration template
 ├── .gitignore
 ├── main.py                       # Root CLI entry point
 ├── pytest.ini                    # Pytest configuration
@@ -258,11 +266,15 @@ The system provides on-call engineers with remote, mobile-friendly incident appr
    TELEGRAM_CHAT_ID=-1001234567890
    TELEGRAM_ENABLED=true
    ```
-3. **Register Webhook with Telegram:**
-   Point Telegram to your public API endpoint (via domain or tunneling such as ngrok/Cloudflare Tunnel):
-   ```bash
-   curl -F "url=https://your-domain.com/telegram/webhook" https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook
-   ```
+3. **Register Webhook or Run Polling Daemon:**
+   - **Production (Webhook):** Point Telegram to your public API endpoint (via domain or tunneling such as ngrok/Cloudflare Tunnel):
+     ```bash
+     curl -F "url=https://your-domain.com/telegram/webhook" https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook
+     ```
+   - **Local Development (No Public Domain Required):** Simply start the standalone long-polling daemon:
+     ```bash
+     python scripts/telegram_bot_runner.py
+     ```
 4. **How It Works:**
    * When an incident occurs, **Remediation Agent** pushes an emergency mitigation alert to the chat.
    * When **Patching Agent** finishes drafting a safe AST fix, it pauses at `hitl_gate` and pushes an interactive card with `[✅ Duyệt & Mở GitHub PR]` and `[❌ Từ chối bản vá]` buttons directly to the engineer's phone.
@@ -273,14 +285,14 @@ The system provides on-call engineers with remote, mobile-friendly incident appr
 
 ## 7. Automated Testing
 
-Run all 58 unit and integration tests:
+Run all 61 unit and integration tests:
 ```bash
 pytest -v
 ```
 
 Expected output:
 ```text
-============================= 58 passed in 1.65s ==============================
+============================= 61 passed in 2.80s ==============================
 ```
 
 ---
