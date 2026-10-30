@@ -265,7 +265,8 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
             post_mortem_report=snapshot.values.get("post_mortem_report"),
         )
 
-    if not snapshot.next:
+    has_proposed_fix = bool(snapshot.values.get("proposed_fix"))
+    if not snapshot.next and not has_proposed_fix:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Phiên làm việc '{thread_id}' đang trong tiến trình phân tích tự động, chưa tới điểm dừng chờ duyệt. Vui lòng đợi trong giây lát.",
@@ -277,6 +278,7 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
         incident_app.update_state(
             config,
             {"approval_status": "approved"},
+            as_node="hitl_gate",
         )
         for _ in incident_app.stream(None, config=config):
             pass
@@ -301,6 +303,7 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
                 "approval_status": "revising",
                 "reviewer_feedback": payload.feedback,
             },
+            as_node="hitl_gate",
         )
         for _ in incident_app.stream(None, config=config):
             pass
@@ -326,6 +329,7 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
         incident_app.update_state(
             config,
             {"approval_status": "rejected"},
+            as_node="hitl_gate",
         )
         for _ in incident_app.stream(None, config=config):
             pass
@@ -473,7 +477,7 @@ def handle_telegram_webhook(payload: Dict[str, Any], background_tasks: Backgroun
                         f"Agent đang tiến hành mở Pull Request và biên soạn Post-Mortem..."
                     ),
                 )
-            incident_app.update_state(config, {"approval_status": "approved"})
+            incident_app.update_state(config, {"approval_status": "approved"}, as_node="hitl_gate")
             background_tasks.add_task(resume_agent_workflow_task, thread_id, True)
             return {"ok": True, "action": "approved", "thread_id": thread_id, "user": user}
 
@@ -498,7 +502,7 @@ def handle_telegram_webhook(payload: Dict[str, Any], background_tasks: Backgroun
                         f"Kế hoạch sửa đổi cho sự cố `{thread_id}` đã bị hủy bỏ bởi kỹ sư trực ban."
                     ),
                 )
-            incident_app.update_state(config, {"approval_status": "rejected"})
+            incident_app.update_state(config, {"approval_status": "rejected"}, as_node="hitl_gate")
             background_tasks.add_task(resume_agent_workflow_task, thread_id, True)
             return {"ok": True, "action": "rejected", "thread_id": thread_id, "user": user}
 

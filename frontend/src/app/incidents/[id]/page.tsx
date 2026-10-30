@@ -43,7 +43,10 @@ export default function IncidentCommandCenter() {
   }, [threadId]);
 
   const severity = incident?.severity || "P0";
-  const isPaused = incident?.is_paused || false;
+  // The gate is active if marked paused OR if proposed fix is ready and approval is pending
+  const isPaused =
+    incident?.is_paused ||
+    (Boolean(incident?.proposed_fix) && incident?.approval_status === "pending");
 
   return (
     <div className="space-y-5">
@@ -133,7 +136,9 @@ export default function IncidentCommandCenter() {
             <span>Swarm Execution Status</span>
           </div>
           <p className="text-xs font-semibold text-white font-mono uppercase">
-            {incident?.status || "Processing"}
+            {isPaused
+              ? "AWAITING HITL REVIEW"
+              : incident?.status || "Processing"}
           </p>
         </div>
       </div>
@@ -144,7 +149,7 @@ export default function IncidentCommandCenter() {
         <div className="lg:col-span-5 space-y-5">
           <TimelineVisualizer
             timeline={incident?.timeline}
-            currentStatus={incident?.status || "processing"}
+            currentStatus={isPaused ? "paused_at_breakpoint" : incident?.status || "processing"}
           />
         </div>
 
