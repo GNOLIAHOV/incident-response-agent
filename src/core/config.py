@@ -23,6 +23,10 @@ class Settings:
     API_DESCRIPTION: str = "REST API cho he thong tu dong dieu tra su co voi FastAPI BackgroundTasks va LangGraph Human-in-the-Loop"
     API_VERSION: str = "1.2.1"
 
+    GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
+    GITHUB_OWNER: str = os.getenv("GITHUB_OWNER", "GNOLIAHOV")
+    GITHUB_DEFAULT_REPO: str = os.getenv("GITHUB_DEFAULT_REPO", "incident-response-agent")
+
     ROOT_DIR: Path = ROOT_DIR
     STATIC_DIR: Path = ROOT_DIR / "src" / "api" / "static"
 
