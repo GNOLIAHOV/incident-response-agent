@@ -185,8 +185,9 @@ def get_incident_status(thread_id: str):
 
     next_nodes = list(snapshot.next) if snapshot.next else []
     proposed_fix = snapshot.values.get("proposed_fix")
+    approval_status = snapshot.values.get("approval_status", "pending")
 
-    is_paused = (("hitl_gate" in next_nodes) or ("execute_fix" in next_nodes)) and bool(proposed_fix)
+    is_paused = (("hitl_gate" in next_nodes) or ("execute_fix" in next_nodes) or bool(proposed_fix)) and approval_status == "pending"
 
     if is_paused:
         current_status = "paused_at_breakpoint"
@@ -371,9 +372,9 @@ def list_incidents():
         if st and st.values:
             next_nodes = list(st.next) if st.next else []
             proposed_fix = st.values.get("proposed_fix")
-            is_paused = (("hitl_gate" in next_nodes) or ("execute_fix" in next_nodes)) and bool(proposed_fix)
+            approval_status = st.values.get("approval_status", "pending")
+            is_paused = (("hitl_gate" in next_nodes) or ("execute_fix" in next_nodes) or bool(proposed_fix)) and approval_status == "pending"
 
-            approval_status = st.values.get("approval_status")
             if is_paused:
                 lifecycle_status = "paused_at_breakpoint"
             elif approval_status in ["approved", "rejected"]:

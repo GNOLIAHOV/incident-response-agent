@@ -10,6 +10,7 @@ import {
   FileText,
   Search,
   ShieldAlert,
+  Loader2,
 } from "lucide-react";
 import { IncidentItem, IncidentSeverity } from "@/lib/types";
 
@@ -87,6 +88,14 @@ export function IncidentTable({ incidents }: IncidentTableProps) {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <AlertCircle className="h-3 w-3" />
             Escalated
+          </span>
+        );
+      case "processing":
+      case "active":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Investigating
           </span>
         );
       default:
