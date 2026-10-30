@@ -7,6 +7,7 @@ interface MetricCardProps {
   title: string;
   value: string;
   subtitle: string;
+  benchmark?: string;
   trend?: string;
   trendDirection?: "up" | "down" | "neutral";
   icon: LucideIcon;
@@ -17,71 +18,43 @@ export function MetricCard({
   title,
   value,
   subtitle,
+  benchmark,
   trend,
   trendDirection = "up",
   icon: Icon,
   variant = "indigo",
 }: MetricCardProps) {
-  const variantStyles = {
-    emerald: {
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      text: "text-emerald-400",
-      glow: "hover:shadow-emerald-500/10",
-    },
-    indigo: {
-      bg: "bg-indigo-500/10",
-      border: "border-indigo-500/20",
-      text: "text-indigo-400",
-      glow: "hover:shadow-indigo-500/10",
-    },
-    sky: {
-      bg: "bg-sky-500/10",
-      border: "border-sky-500/20",
-      text: "text-sky-400",
-      glow: "hover:shadow-sky-500/10",
-    },
-    amber: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-      text: "text-amber-400",
-      glow: "hover:shadow-amber-500/10",
-    },
-    rose: {
-      bg: "bg-rose-500/10",
-      border: "border-rose-500/20",
-      text: "text-rose-400",
-      glow: "hover:shadow-rose-500/10",
-    },
+  const signalColor = {
+    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    indigo: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
+    sky: "text-sky-400 bg-sky-500/10 border-sky-500/20",
+    amber: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    rose: "text-rose-400 bg-rose-500/10 border-rose-500/20",
   }[variant];
 
   return (
-    <div
-      className={`rounded-2xl bg-obsidian-850/80 border border-slate-800 p-6 backdrop-blur-sm transition-all duration-300 hover:border-slate-700 hover:shadow-xl ${variantStyles.glow}`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+    <div className="rounded-xl bg-surface-900 border border-hairline p-5 transition-colors duration-150 hover:border-slate-700/80">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
           {title}
         </span>
-        <div
-          className={`h-10 w-10 rounded-xl ${variantStyles.bg} ${variantStyles.border} border flex items-center justify-center`}
-        >
-          <Icon className={`h-5 w-5 ${variantStyles.text}`} />
+        <div className={`p-1.5 rounded-lg border ${signalColor}`}>
+          <Icon className="h-4 w-4" />
         </div>
       </div>
 
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-3xl font-extrabold tracking-tight text-white font-mono">
+      <div className="flex items-baseline justify-between gap-2 mb-2">
+        <span className="text-3xl font-bold tracking-tight text-white font-mono tabular-nums">
           {value}
         </span>
         {trend && (
           <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md ${
               trendDirection === "up"
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                 : trendDirection === "down"
-                ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
-                : "bg-slate-700 text-slate-300"
+                ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                : "bg-surface-800 text-slate-400"
             }`}
           >
             {trend}
@@ -89,7 +62,17 @@ export function MetricCard({
         )}
       </div>
 
-      <p className="text-xs text-slate-400 leading-relaxed">{subtitle}</p>
+      <div className="space-y-1 pt-1 border-t border-hairline">
+        <p className="text-[11px] text-slate-400 leading-normal line-clamp-2">
+          {subtitle}
+        </p>
+        {benchmark && (
+          <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1">
+            <span>Benchmark:</span>
+            <span className="text-slate-400">{benchmark}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

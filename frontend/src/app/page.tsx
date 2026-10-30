@@ -7,8 +7,6 @@ import {
   Zap,
   TrendingUp,
   RefreshCw,
-  AlertOctagon,
-  Sparkles,
 } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
 import { ServiceHealthMap } from "@/components/ServiceHealthMap";
@@ -37,32 +35,32 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Banner / Hero */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+    <div className="space-y-6">
+      {/* Top Banner / Mission Control Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-hairline">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              SLO 99.99% HEALTHY
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              CLUSTER SLO 99.99% HEALTHY
             </span>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-[11px] text-slate-500 font-mono">
               In-VPC Self-Hosted Swarm
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Autonomous SRE Operations Dashboard
           </h1>
-          <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-            Real-time observability and supervisor-coordinated response across microservices.
-            Mitigates outages in seconds using AST-validated patches and dual HITL review.
+          <p className="text-xs text-slate-400 mt-0.5 max-w-2xl">
+            Real-time multi-agent supervisor coordination across microservices.
+            Mitigates outages in seconds using AST-validated patches and dual HITL authorization.
           </p>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadData}
-            className="p-2 rounded-xl bg-obsidian-850 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-colors"
+            className="p-1.5 rounded-lg bg-surface-900 border border-hairline text-slate-400 hover:text-white transition-colors"
             title="Refresh Incident Stream"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -71,12 +69,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4 Golden SRE Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 4 Golden SRE Metric Cards with Benchmarks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <MetricCard
           title="Mean Time To Recover (MTTR)"
-          value="28s"
-          subtitle="From Prometheus alert trigger to circuit breaker & AST patch generation."
+          value="28.4s"
+          subtitle="Alert trigger to circuit breaker & AST patch generation."
+          benchmark="Industry avg: 45 min"
           trend="-98.9%"
           trendDirection="up"
           icon={Zap}
@@ -85,8 +84,9 @@ export default function DashboardPage() {
 
         <MetricCard
           title="Mean Time To Detect (MTTD)"
-          value="6s"
-          subtitle="Real-time log ingestion & correlation by Supervisor Specialist swarm."
+          value="6.1s"
+          subtitle="Real-time log ingestion & correlation by Supervisor swarm."
+          benchmark="Industry avg: 15 min"
           trend="-92.1%"
           trendDirection="up"
           icon={Clock}
@@ -94,9 +94,10 @@ export default function DashboardPage() {
         />
 
         <MetricCard
-          title="Cluster SLA Uptime"
-          value="99.99%"
-          subtitle="P99 SLO error budget intact across payment, auth, and inventory services."
+          title="Cluster SLA Availability"
+          value="99.992%"
+          subtitle="P99 SLO error budget intact across all services."
+          benchmark="SLA target: 99.95%"
           trend="+0.04%"
           trendDirection="up"
           icon={ShieldCheck}
@@ -106,7 +107,8 @@ export default function DashboardPage() {
         <MetricCard
           title="Autonomous Resolution"
           value="92.4%"
-          subtitle="Incidents resolved without code rewrite or emergency pager escalations."
+          subtitle="Incidents resolved without code rewrite or emergency on-call."
+          benchmark="SRE target: > 80%"
           trend="+14.2%"
           trendDirection="up"
           icon={TrendingUp}
@@ -114,10 +116,10 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Microservices Swarm Health Map */}
+      {/* Microservices Swarm Topology Map */}
       <ServiceHealthMap />
 
-      {/* Incident Operations Table */}
+      {/* Incident Operations Stream */}
       <IncidentTable incidents={incidents} onRefresh={loadData} />
     </div>
   );

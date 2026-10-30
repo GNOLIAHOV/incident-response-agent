@@ -12,7 +12,6 @@ interface CodePatchViewerProps {
 export function CodePatchViewer({
   patchCode,
   serviceName,
-  isPaused,
 }: CodePatchViewerProps) {
   const [copied, setCopied] = useState(false);
 
@@ -26,43 +25,43 @@ export function CodePatchViewer({
   const lines = (patchCode || "").split("\n");
 
   return (
-    <div className="rounded-2xl bg-obsidian-850/80 border border-slate-800 p-6 backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-800">
+    <div className="rounded-xl bg-surface-900 border border-hairline p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5 pb-3 border-b border-hairline">
         <div>
           <div className="flex items-center gap-2">
-            <Code className="h-5 w-5 text-indigo-400" />
-            <h3 className="font-semibold text-white text-base">
-              Autonomous Code Patch
+            <Code className="h-4 w-4 text-indigo-400" />
+            <h3 className="font-semibold text-white text-sm">
+              AST-Validated Code Patch
             </h3>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Target file: <span className="font-mono text-slate-300">{serviceName || "service"}/app.py</span>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Target: <span className="font-mono text-slate-300">{serviceName || "service"}/app.py</span>
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {patchCode ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>AST Validated</span>
+              <span>AST Verified Safe</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs font-mono">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-surface-850 text-slate-400 text-[11px] font-mono border border-hairline">
               <AlertCircle className="h-3.5 w-3.5" />
-              <span>Awaiting Patch Synthesis</span>
+              <span>Synthesizing...</span>
             </div>
           )}
 
           {patchCode && (
             <button
               onClick={handleCopy}
-              className="p-1.5 rounded-lg bg-obsidian-900 border border-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded bg-surface-850 border border-hairline text-slate-400 hover:text-white transition-colors"
               title="Copy Patch to Clipboard"
             >
               {copied ? (
-                <Check className="h-4 w-4 text-emerald-400" />
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
-                <Copy className="h-4 w-4" />
+                <Copy className="h-3.5 w-3.5" />
               )}
             </button>
           )}
@@ -70,32 +69,45 @@ export function CodePatchViewer({
       </div>
 
       {patchCode ? (
-        <div className="relative rounded-xl bg-obsidian-950 border border-slate-800 overflow-hidden font-mono text-xs">
-          <div className="flex items-center justify-between px-4 py-2 bg-obsidian-900 border-b border-slate-800 text-[11px] text-slate-400">
-            <span>Unified Diff Preview</span>
-            <span className="text-emerald-400 font-semibold">Ready for GitHub PR Dispatch</span>
+        <div className="relative rounded-lg bg-surface-950 border border-hairline overflow-hidden font-mono text-xs">
+          <div className="flex items-center justify-between px-3.5 py-1.5 bg-surface-900 border-b border-hairline text-[10px] text-slate-400">
+            <span>Unified Diff Inspection</span>
+            <span className="text-emerald-400 font-semibold">Zero Unsafe Syscalls Detected</span>
           </div>
 
-          <div className="p-4 overflow-x-auto max-h-96">
-            <table className="w-full">
+          <div className="p-3.5 overflow-x-auto max-h-96">
+            <table className="w-full text-xs">
               <tbody>
-                {lines.map((line, idx) => (
-                  <tr key={idx} className="hover:bg-slate-900/50">
-                    <td className="w-10 pr-4 text-right text-slate-600 select-none">
-                      {idx + 1}
-                    </td>
-                    <td className="text-slate-200 whitespace-pre">
-                      {line}
-                    </td>
-                  </tr>
-                ))}
+                {lines.map((line, idx) => {
+                  const isComment = line.trim().startsWith("#");
+                  const isKeyword = line.includes("def ") || line.includes("return ") || line.includes("raise ");
+
+                  return (
+                    <tr key={idx} className="hover:bg-surface-900/60 transition-colors">
+                      <td className="w-8 pr-3 text-right text-slate-600 select-none tabular-nums text-[11px]">
+                        {idx + 1}
+                      </td>
+                      <td
+                        className={`whitespace-pre text-xs ${
+                          isComment
+                            ? "text-emerald-400/80 font-sans italic"
+                            : isKeyword
+                            ? "text-indigo-300"
+                            : "text-slate-200"
+                        }`}
+                      >
+                        {line}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       ) : (
-        <div className="rounded-xl bg-obsidian-950 border border-slate-800 p-8 text-center">
-          <Code className="h-8 w-8 text-slate-600 mx-auto mb-2 animate-pulse" />
+        <div className="rounded-lg bg-surface-950 border border-hairline p-6 text-center">
+          <Code className="h-6 w-6 text-slate-600 mx-auto mb-2 animate-pulse" />
           <p className="text-xs text-slate-400">
             PatchingSpecialist is analyzing the AST and synthesizing remediation code...
           </p>

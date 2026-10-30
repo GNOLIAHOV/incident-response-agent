@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Server, CheckCircle2, AlertTriangle, ShieldCheck, Cpu } from "lucide-react";
+import { Server, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 
 interface ServiceItem {
   id: string;
@@ -19,63 +19,63 @@ const SERVICES: ServiceItem[] = [
     name: "payment_service",
     category: "Financial Gateway",
     status: "mitigated",
-    latency: "34ms (P99)",
+    latency: "34ms",
     uptime: "99.98%",
-    activeGuard: "MitigationSpecialist (Circuit Breaker)",
+    activeGuard: "MitigationSpecialist",
   },
   {
     id: "auth_service",
     name: "auth_service",
     category: "Security & IAM",
     status: "healthy",
-    latency: "12ms (P99)",
+    latency: "12ms",
     uptime: "100.00%",
-    activeGuard: "TriageSpecialist (Anomaly Watch)",
+    activeGuard: "TriageSpecialist",
   },
   {
     id: "inventory_service",
     name: "inventory_service",
     category: "Catalog & Stock",
     status: "healthy",
-    latency: "18ms (P99)",
+    latency: "18ms",
     uptime: "99.95%",
-    activeGuard: "PatchingSpecialist (AST Enforcer)",
+    activeGuard: "PatchingSpecialist",
   },
   {
     id: "notification_service",
     name: "notification_service",
     category: "Telegram / Alerts",
     status: "healthy",
-    latency: "45ms (P99)",
+    latency: "45ms",
     uptime: "100.00%",
-    activeGuard: "ScribeSpecialist (Audit Logging)",
+    activeGuard: "ScribeSpecialist",
   },
 ];
 
 export function ServiceHealthMap() {
   return (
-    <div className="rounded-2xl bg-obsidian-850/80 border border-slate-800 p-6 backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="rounded-xl bg-surface-900 border border-hairline p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Server className="h-5 w-5 text-indigo-400" />
-            <h3 className="font-semibold text-white text-base">
-              Microservices Swarm Health Map
+            <Server className="h-4 w-4 text-indigo-400" />
+            <h3 className="font-semibold text-white text-sm">
+              Microservices Cluster Topology
             </h3>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time topology monitored by autonomous SRE agents in zero-egress VPC
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Active telemetry monitored by LangGraph Supervisor Swarm in zero-egress VPC
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            All 4 Clusters Healthy
+          <span className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-md border border-emerald-500/20">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+            All 4 Nodes Operational
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {SERVICES.map((srv) => {
           const isMitigated = srv.status === "mitigated";
           const isHealthy = srv.status === "healthy";
@@ -83,39 +83,39 @@ export function ServiceHealthMap() {
           return (
             <div
               key={srv.id}
-              className={`rounded-xl border p-4 transition-all duration-200 ${
+              className={`rounded-lg border p-3.5 transition-colors duration-150 ${
                 isMitigated
-                  ? "bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50"
-                  : "bg-obsidian-900/60 border-slate-800 hover:border-slate-700"
+                  ? "bg-amber-950/20 border-amber-500/30"
+                  : "bg-surface-850/60 border-hairline hover:border-slate-700"
               }`}
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-2.5">
                 <div>
-                  <h4 className="font-mono text-sm font-semibold text-white">
+                  <h4 className="font-mono text-xs font-bold text-white">
                     {srv.name}
                   </h4>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[10px] text-slate-400 block">
                     {srv.category}
                   </span>
                 </div>
                 {isHealthy ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                 ) : (
-                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                 )}
               </div>
 
-              <div className="space-y-1.5 text-xs border-t border-slate-800/80 pt-3">
+              <div className="space-y-1 text-[11px] border-t border-hairline pt-2">
                 <div className="flex justify-between text-slate-400">
-                  <span>Latency:</span>
-                  <span className="font-mono text-slate-200">{srv.latency}</span>
+                  <span>P99 Latency:</span>
+                  <span className="font-mono tabular-nums text-slate-200">{srv.latency}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
-                  <span>Uptime:</span>
-                  <span className="font-mono text-emerald-400">{srv.uptime}</span>
+                  <span>Availability:</span>
+                  <span className="font-mono tabular-nums text-emerald-400">{srv.uptime}</span>
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-indigo-400/90 pt-1">
-                  <ShieldCheck className="h-3 w-3 shrink-0" />
+                <div className="flex items-center justify-between text-[10px] text-indigo-400/90 pt-1 font-mono">
+                  <span>Guarded by:</span>
                   <span className="truncate">{srv.activeGuard}</span>
                 </div>
               </div>

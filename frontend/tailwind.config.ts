@@ -10,23 +10,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        obsidian: {
-          950: "#06090e",
-          900: "#0B0F17",
-          850: "#0f1622",
-          800: "#131C2E",
-          700: "#1E293B",
-          600: "#334155",
+        canvas: "#080B11",
+        surface: {
+          950: "#080B11",
+          900: "#0D121D",
+          850: "#121927",
+          800: "#182235",
+          700: "#222F49",
         },
       },
       fontFamily: {
         mono: [
           "JetBrains Mono",
+          "SF Mono",
           "Fira Code",
           "Consolas",
           "ui-monospace",
           "monospace",
         ],
+      },
+      borderColor: {
+        hairline: "rgba(255, 255, 255, 0.07)",
+        strong: "rgba(255, 255, 255, 0.14)",
       },
     },
   },

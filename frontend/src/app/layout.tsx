@@ -15,21 +15,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi" className="dark">
-      <body className="min-h-screen bg-obsidian-900 text-slate-100 flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+      <body className="min-h-screen bg-canvas text-slate-100 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-200">
         <Navbar />
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {children}
         </main>
-        <footer className="border-t border-slate-800 bg-obsidian-950/80 py-6 text-xs text-slate-500 text-center">
-          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <footer className="border-t border-hairline bg-surface-950 py-4 text-xs text-slate-500">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-mono">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 inline-block"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block"></span>
               <span>Enterprise In-VPC SRE Cluster Active</span>
-              <span className="text-slate-600">|</span>
-              <span>Zero-Egress AST Enforcement</span>
+              <span className="text-slate-700">|</span>
+              <span>Zero-Egress AST Enforcer</span>
             </div>
             <div>
-              <span>SRE Swarm Multi-Agent Architecture © 2026. All rights reserved.</span>
+              <span>SRE Swarm Multi-Agent Architecture © 2026.</span>
             </div>
           </div>
         </footer>

@@ -6,7 +6,6 @@ import {
   Clock,
   CircleDot,
   Radio,
-  ShieldAlert,
   Flame,
   Search,
   Code2,
@@ -72,63 +71,58 @@ export function TimelineVisualizer({
   const events = timeline || [];
 
   return (
-    <div className="rounded-2xl bg-obsidian-850/80 border border-slate-800 p-6 backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+    <div className="rounded-xl bg-surface-900 border border-hairline p-5">
+      <div className="flex items-center justify-between mb-5 pb-3 border-b border-hairline">
         <div>
-          <h3 className="font-semibold text-white text-base">
-            Multi-Agent Swarm Execution Flow
+          <h3 className="font-semibold text-white text-sm">
+            Multi-Agent Swarm Progression
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Real-time stage transitions coordinated by LangGraph Supervisor
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Stage transitions coordinated by Supervisor in LangGraph
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono">
-          <CircleDot className="h-3 w-3 animate-pulse" />
-          <span>Live Checkpoint Stream</span>
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-850 border border-hairline text-indigo-400 text-[10px] font-mono">
+          <CircleDot className="h-2.5 w-2.5 animate-pulse" />
+          <span>Live Checkpoint</span>
         </div>
       </div>
 
-      <div className="relative pl-6 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
-        {STAGES.map((stage, idx) => {
+      <div className="relative pl-5 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-800">
+        {STAGES.map((stage) => {
           const matchingEvent = events.find((e) =>
             e.stage ? e.stage.toLowerCase() === stage.key : false
           );
           const hasOccurred = !!matchingEvent;
           const isPausedAtThis =
             stage.key === "hitl_gate" && currentStatus === "paused_at_breakpoint";
-          const isLastCompleted =
-            hasOccurred &&
-            (currentStatus === "completed" || idx <= events.length - 1);
-
-          const Icon = stage.icon;
 
           return (
-            <div key={stage.key} className="relative group">
+            <div key={stage.key} className="relative">
               {/* Timeline Node Indicator */}
               <div
-                className={`absolute -left-6 top-0.5 h-6 w-6 rounded-full flex items-center justify-center transition-all ${
+                className={`absolute -left-5 top-0.5 h-5 w-5 rounded-full flex items-center justify-center transition-colors ${
                   isPausedAtThis
-                    ? "bg-amber-500 text-obsidian-950 ring-4 ring-amber-500/20 animate-pulse"
+                    ? "bg-amber-500 text-surface-950 ring-4 ring-amber-500/20 animate-pulse"
                     : hasOccurred
-                    ? "bg-emerald-500 text-obsidian-950 ring-4 ring-emerald-500/10"
-                    : "bg-obsidian-900 border border-slate-700 text-slate-500"
+                    ? "bg-emerald-500 text-surface-950"
+                    : "bg-surface-950 border border-slate-700 text-slate-500"
                 }`}
               >
                 {hasOccurred ? (
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <CheckCircle2 className="h-3 w-3" />
                 ) : isPausedAtThis ? (
-                  <Clock className="h-3.5 w-3.5" />
+                  <Clock className="h-3 w-3" />
                 ) : (
-                  <div className="h-1.5 w-1.5 rounded-full bg-slate-600" />
+                  <div className="h-1 w-1 rounded-full bg-slate-600" />
                 )}
               </div>
 
               {/* Stage Content */}
               <div className="pl-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-0.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`font-semibold text-sm ${
+                      className={`font-semibold text-xs ${
                         isPausedAtThis
                           ? "text-amber-400"
                           : hasOccurred
@@ -138,26 +132,26 @@ export function TimelineVisualizer({
                     >
                       {stage.name}
                     </span>
-                    <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-800 text-slate-400 font-mono border border-hairline">
                       {stage.agent}
                     </span>
                   </div>
 
                   {matchingEvent?.timestamp && (
-                    <span className="text-xs text-slate-500 font-mono">
+                    <span className="text-[10px] text-slate-500 font-mono tabular-nums">
                       {matchingEvent.timestamp}
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs text-slate-400 mb-2">
+                <p className="text-[11px] text-slate-400 mb-1.5">
                   {stage.desc}
                 </p>
 
                 {matchingEvent && (
-                  <div className="p-3 rounded-xl bg-obsidian-900 border border-slate-800 text-xs text-slate-300 font-sans leading-relaxed">
-                    <span className="text-emerald-400 font-mono font-medium block mb-1">
-                      Action Dispatched:
+                  <div className="p-2.5 rounded-lg bg-surface-950 border border-hairline text-[11px] text-slate-300 font-sans leading-relaxed">
+                    <span className="text-emerald-400 font-mono text-[10px] font-semibold block mb-0.5">
+                      Action Executed:
                     </span>
                     {matchingEvent.message || "Agent task executed and verified."}
                   </div>

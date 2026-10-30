@@ -7,10 +7,8 @@ import {
   ArrowLeft,
   RefreshCw,
   FileText,
-  AlertTriangle,
   Flame,
   Radio,
-  ExternalLink,
   ShieldCheck,
 } from "lucide-react";
 import { fetchIncidentStatus } from "@/lib/api";
@@ -48,30 +46,30 @@ export default function IncidentCommandCenter() {
   const isPaused = incident?.is_paused || false;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-5">
       {/* Header & Breadcrumb */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 border-b border-hairline">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1.5">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition-colors"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Dashboard</span>
+              <ArrowLeft className="h-3 w-3" />
+              <span>Dashboard</span>
             </Link>
             <span className="text-slate-600">/</span>
-            <span className="text-xs font-mono text-indigo-400 font-semibold">
-              War Room Command Center
+            <span className="text-[11px] font-mono text-indigo-400 font-semibold">
+              War Room Command
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-white font-mono tracking-tight">
               {threadId}
             </h1>
             <span
-              className={`px-3 py-1 rounded-full text-xs font-mono font-bold ${
+              className={`px-2.5 py-0.5 rounded text-[11px] font-mono font-bold ${
                 severity === "P0"
                   ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
                   : severity === "P1"
@@ -81,17 +79,17 @@ export default function IncidentCommandCenter() {
             >
               {severity} SEVERITY
             </span>
-            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
+            <span className="px-2 py-0.5 rounded bg-surface-850 border border-hairline text-[11px] font-mono text-slate-300">
               Target: {incident?.service_name || "payment_service"}
             </span>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadStatus}
-            className="p-2.5 rounded-xl bg-obsidian-850 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg bg-surface-900 border border-hairline text-slate-400 hover:text-white transition-colors"
             title="Refresh State Checkpoint"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -99,51 +97,51 @@ export default function IncidentCommandCenter() {
 
           <Link
             href={`/post-mortems/${threadId}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-md shadow-indigo-600/20"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 text-white font-semibold text-xs border border-hairline transition-colors"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-3.5 w-3.5 text-indigo-400" />
             <span>Google SRE Post-Mortem</span>
           </Link>
         </div>
       </div>
 
-      {/* Overview Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl bg-obsidian-850/80 border border-slate-800 p-4">
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-            <Radio className="h-4 w-4 text-emerald-400" />
+      {/* Overview Stat Strip */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-lg bg-surface-900 border border-hairline p-3.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-0.5">
+            <Radio className="h-3.5 w-3.5 text-emerald-400" />
             <span>Active Remediation Action</span>
           </div>
-          <p className="text-sm font-semibold text-white font-mono truncate">
+          <p className="text-xs font-semibold text-white font-mono truncate">
             {incident?.mitigation_action_taken || "Investigation in progress..."}
           </p>
         </div>
 
-        <div className="rounded-xl bg-obsidian-850/80 border border-slate-800 p-4">
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-            <ShieldCheck className="h-4 w-4 text-indigo-400" />
+        <div className="rounded-lg bg-surface-900 border border-hairline p-3.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-0.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-indigo-400" />
             <span>Approval Lifecycle</span>
           </div>
-          <p className="text-sm font-semibold text-white font-mono uppercase">
+          <p className="text-xs font-semibold text-white font-mono uppercase">
             {incident?.approval_status || "Pending Verification"}
           </p>
         </div>
 
-        <div className="rounded-xl bg-obsidian-850/80 border border-slate-800 p-4">
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-            <Flame className="h-4 w-4 text-rose-400" />
+        <div className="rounded-lg bg-surface-900 border border-hairline p-3.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-0.5">
+            <Flame className="h-3.5 w-3.5 text-rose-400" />
             <span>Swarm Execution Status</span>
           </div>
-          <p className="text-sm font-semibold text-white font-mono uppercase">
+          <p className="text-xs font-semibold text-white font-mono uppercase">
             {incident?.status || "Processing"}
           </p>
         </div>
       </div>
 
       {/* Main Grid: Left = Timeline, Right = Code & HITL */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column (5 cols): Multi-Agent Timeline */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-5">
           <TimelineVisualizer
             timeline={incident?.timeline}
             currentStatus={incident?.status || "processing"}
@@ -151,7 +149,7 @@ export default function IncidentCommandCenter() {
         </div>
 
         {/* Right Column (7 cols): Code Patch & HITL Action Bar */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-5">
           <CodePatchViewer
             patchCode={incident?.proposed_fix}
             serviceName={incident?.service_name}
