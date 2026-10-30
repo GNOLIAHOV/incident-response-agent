@@ -13,7 +13,7 @@ services:
     env_file:
       - .env
     volumes:
-      # Mount volume để lưu trữ SQLite database an toàn qua các lần restart
+      # Mount volume de luu tru SQLite database an toan qua cac lan restart
       - ./data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -21,3 +21,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: incident_response_portal
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      incident-agent:
+        condition: service_healthy

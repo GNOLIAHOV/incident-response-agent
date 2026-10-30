@@ -14,3 +14,10 @@ data/
 
 # Bao mat API Key (Tuyet doi khong day len Git)
 .env
+.env*.local
+
+# Frontend Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+

@@ -2,10 +2,13 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14_App_Router-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS_3.4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2%2B-black?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4?style=flat-square&logo=google)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage_Build-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
-[![Pytest](https://img.shields.io/badge/Pytest-58%2F58_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-59%2F59_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL_Mode-003B57?style=flat-square&logo=sqlite)](https://www.sqlite.org/)
 
 An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent Swarm** designed under the golden principle:
@@ -25,9 +28,12 @@ An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent 
 * **Persistent SQLite Checkpointing (`PersistentSqliteSaver`):** Checkpoints active graph state and breakpoints into a local SQLite database (`data/incidents.db`) with WAL mode, surviving process reloads and container restarts.
 * **Real GitHub Pull Request & Issue Integration:** Opens real feature branches (`fix/{service}-{incident_id}`), commits incident patch artifacts (`incidents/patches/INC-xxx-{service}.md`), and creates PRs/Issues via GitHub REST API v3 (with graceful simulation fallback).
 * **Containerized Production Deployment:** Production-ready multi-stage `Dockerfile` (non-root `appuser`) with `docker-compose.yml` and persistent volume mounts.
-* **Interactive 4-Step Visual Dashboard:** Web interface featuring a War Room Live Timeline, feedback modal, and Post-Mortem Markdown viewer.
+* **Interactive 4-Step Visual Dashboard & Enterprise SRE Web Portal (Next.js 14):**
+  - **Executive CTO Dashboard (`/`):** Real-time monitoring of 4 Golden SRE Metrics (MTTR ~28s, MTTD ~6s, 99.99% SLA, 92.4% Autonomous Resolution), Microservices Swarm Health Map, and 1-click Emergency Simulator.
+  - **War Room Command Center (`/incidents/[id]`):** Live state transitions across Swarm stages, syntax-highlighted unified diffs with Python AST Safe verification badges, and dual-channel HITL approval actions.
+  - **Google SRE Post-Mortem Knowledge Base (`/post-mortems`):** Searchable blameless post-mortem catalog with 5 Whys deduction, timeline graphs, and 1-click Markdown / PDF export.
 * **📱 Interactive Telegram Bot for Remote HITL Approval:** Pushes real-time alerts to on-call mobile phones with interactive Inline Buttons (`[✅ Approve & Open PR]` / `[❌ Reject]`). Engineers can review and trigger fixes anywhere without opening their laptop.
-* **100% Automated Test Suite:** 58 comprehensive unit and integration tests running in ~1.6 seconds.
+* **100% Automated Test Suite:** 59 comprehensive unit and integration tests running in ~2.0 seconds.
 
 ---
 
@@ -84,8 +90,18 @@ An enterprise-grade **Autonomous Site Reliability Engineering (SRE) Multi-Agent 
 
 ```text
 incident-response-agent/
-├── Dockerfile                    # Multi-stage production container build (non-root appuser)
-├── docker-compose.yml            # Container orchestration with volume persistence
+├── frontend/                     # Enterprise SRE Web Portal (Next.js 14 + Tailwind CSS + TypeScript)
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx          # Executive CTO Dashboard (Golden Metrics, Service Map)
+│   │   │   ├── incidents/[id]/   # War Room Command Center (Swarm Timeline, AST Patch, HITL)
+│   │   │   └── post-mortems/     # Google SRE Post-Mortem Catalog & Report Reader
+│   │   ├── components/           # UI Components (MetricCard, IncidentTable, HITLActionBar)
+│   │   └── lib/                  # Type contracts & typed FastAPI client
+│   ├── Dockerfile                # Production Next.js multi-stage container build
+│   └── package.json
+├── Dockerfile                    # Multi-stage production container build (FastAPI backend)
+├── docker-compose.yml            # Multi-container orchestration (Backend: 8000, Frontend: 3000)
 ├── .env.example                  # Enterprise configuration template for customers
 ├── .dockerignore                 # Excluded directories and artifacts
 ├── deploy/                       # Enterprise In-VPC deployment manifests
@@ -192,17 +208,27 @@ docker compose up -d --build
 docker compose down
 ```
 
-### Option B: Local Python Environment
+### Option B: Local Python & Next.js Environment
 
-1. Activate your virtual environment and install dependencies:
+1. **Start the FastAPI Backend:**
 ```bash
 pip install -r requirements.txt
-```
-
-2. Run the FastAPI Server & Dashboard:
-```bash
 uvicorn src.api.app:app --reload --port 8000
 ```
+
+2. **Start the Enterprise SRE Web Portal:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+3. **Access Interfaces:**
+* **Enterprise SRE Web Portal:** [http://localhost:3000/](http://localhost:3000/)
+* **Executive Dashboard:** [http://localhost:3000/](http://localhost:3000/)
+* **War Room Command Center:** [http://localhost:3000/incidents/INC-PROD-001](http://localhost:3000/incidents/INC-PROD-001)
+* **Post-Mortem Knowledge Base:** [http://localhost:3000/post-mortems](http://localhost:3000/post-mortems)
+* **FastAPI Backend Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### Option C: Enterprise Kubernetes Deployment (In-VPC)
 
