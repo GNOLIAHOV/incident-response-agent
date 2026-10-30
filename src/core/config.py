@@ -33,7 +33,6 @@ class Settings:
     TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 
     ROOT_DIR: Path = ROOT_DIR
-    STATIC_DIR: Path = ROOT_DIR / "src" / "api" / "static"
 
 
 settings = Settings()

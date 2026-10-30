@@ -24,6 +24,7 @@ from src.api.app import (
     approve_incident_fix,
     get_incident_status,
     health_check,
+    root,
     trigger_incident,
 )
 from src.api.schemas import (
@@ -174,6 +175,14 @@ def test_api_health_check():
     """Kiểm tra endpoint /health trả về status 200 và đúng format JSON."""
     result = health_check()
     assert result == {"status": "ok", "service": "incident-response-agent"}
+
+
+def test_api_root():
+    """Kiểm tra endpoint GET / trả về thông tin dịch vụ và liên kết tài liệu/portal."""
+    result = root()
+    assert result["status"] == "operational"
+    assert "docs_url" in result
+    assert "portal_url" in result
 
 
 def test_api_trigger_incident_background():

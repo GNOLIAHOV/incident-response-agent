@@ -131,9 +131,7 @@ incident-response-agent/
 │   │   ├── graph.py              # Multi-Agent Swarm StateGraph compilation
 │   │   ├── nodes.py              # Core nodes & helper routines
 │   │   └── state.py              # Extended IncidentState schema
-│   ├── api/                      # REST API & Web Dashboard layer
-│   │   ├── static/
-│   │   │   └── dashboard.html    # Interactive 4-step TailwindCSS web dashboard
+│   ├── api/                      # REST API backend layer
 │   │   ├── __init__.py
 │   │   ├── app.py                # FastAPI endpoints & background task dispatchers
 │   │   └── schemas.py            # Pydantic request / response validation schemas

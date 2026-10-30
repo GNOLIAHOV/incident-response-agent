@@ -5,7 +5,6 @@ from typing import Any, Dict, List
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from langchain_core.messages import HumanMessage
 
 from src.core.config import settings
@@ -65,13 +64,16 @@ def resume_agent_workflow_task(thread_id: str, notify_telegram: bool = True):
         logger.error(f"Lỗi trong tác vụ tiếp tục workflow cho thread {thread_id}: {str(exc)}", exc_info=True)
 
 
-@app.get("/", response_class=HTMLResponse, tags=["Dashboard"])
-def get_dashboard():
-    """Giao diện trực quan 3 bước giúp kiểm thử toàn bộ luồng hoạt động của Agent."""
-    dashboard_file = settings.STATIC_DIR / "dashboard.html"
-    if dashboard_file.exists():
-        return HTMLResponse(content=dashboard_file.read_text(encoding="utf-8"))
-    return HTMLResponse(content="<h1>Dashboard template not found</h1>", status_code=404)
+@app.get("/", tags=["System"])
+def root():
+    """Thông tin API Autonomous SRE Incident Response Agent & đường dẫn tài liệu."""
+    return {
+        "service": settings.API_TITLE,
+        "version": settings.API_VERSION,
+        "status": "operational",
+        "docs_url": "/docs",
+        "portal_url": "http://localhost:3002",
+    }
 
 
 @app.get("/health", tags=["System"])
