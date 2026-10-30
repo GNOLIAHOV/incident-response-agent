@@ -1,304 +1,165 @@
-# Autonomous Incident Response AI Agent
+# Autonomous SRE Incident Response Platform
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2%2B-black?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4?style=flat-square&logo=google)](https://ai.google.dev/)
-[![Pytest](https://img.shields.io/badge/Pytest-15%2F15_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-33%2F33_Passed-0A9EDC?style=flat-square&logo=pytest)](https://docs.pytest.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-WAL_Mode-003B57?style=flat-square&logo=sqlite)](https://www.sqlite.org/)
 
-An autonomous software reliability engineering (SRE) AI agent designed for **automated root cause analysis (RCA)**, **code patch synthesis**, and **safe deployment via a Human-in-the-Loop (HITL) approval gate** before opening GitHub Pull Requests.
+An enterprise-grade autonomous Site Reliability Engineering (SRE) AI platform designed under the golden principle:
+> **"Mitigate First, Fix Later"** — Automatically ingests alerts, executes immediate emergency remediation to restore service uptime, dispatches War Room notifications, synthesizes verified code patches via Human-in-the-Loop review with an interactive feedback loop, and auto-generates Google SRE-standard Post-Mortem reports.
 
 ---
 
 ## 1. Key Highlights & Core Capabilities
 
-* **Autonomous Log Investigation:** Automatically queries system logs (`query_error_logs`) to extract stack traces, error messages, and offending source lines without requiring manual engineer diagnosis.
-* **Dynamic Multi-Service Resolution:** Intelligently adapts to any reporting microservice (e.g., `auth_service`, `payment_service`, `inventory_service`), dynamically generating service-specific repositories, patch branches, and pull request titles.
-* **Root Cause Analysis with Gemini:** Integrates Google Gemini (`gemini-2.5-flash` or configurable) with lazy initialization and structured system prompts to diagnose application logic bugs, network timeouts, and concurrency deadlocks.
-* **Human-in-the-Loop (HITL) Safety Gate:** Enforces LangGraph dynamic breakpoints via `interrupt_before=["execute_fix"]`. The AI synthesizes the fix but **cannot modify source code or open PRs** until an authorized human engineer explicitly approves.
-* **Asynchronous Background Processing:** Uses FastAPI `BackgroundTasks` to immediately acknowledge incident webhooks (`HTTP 202 Accepted`), offloading the multi-step LangGraph workflow to background execution to avoid HTTP client timeouts.
-* **Interactive 3-Step Visual Dashboard:** Includes a clean web dashboard (separated in `src/api/static/dashboard.html`) with real-time status polling for incident reporting, patch inspection, and one-click approve/reject actions.
-* **Dual Execution Modes:** Fully supports both **Interactive CLI workflow** (`python main.py`) and **REST API / Web Dashboard** (`uvicorn src.api.app:app`).
-* **100% Automated Test Suite:** 15 comprehensive unit and API integration tests running in ~1.1 seconds.
+* **Automated Alert Ingestion & Triage:** Supports Prometheus Alertmanager / Grafana Webhooks (`POST /alerts/webhook`) with automatic severity classification (`P1-Critical`, `P2-High`, `P3-Medium`).
+* **Automated Emergency Remediation (Mitigate First):** Automatically executes simulated infrastructure runbooks (`restart_container`, `rollback_deployment`, `apply_traffic_shedding`) in seconds before deep code diagnosis.
+* **War Room Live Notification Dispatch:** Formats and dispatches incident status cards to team collaboration channels (Slack/Discord/Teams).
+* **Persistent SQLite Checkpointing (`PersistentSqliteSaver`):** Checkpoints active graph state and breakpoints into a local SQLite database (`data/incidents.db`) with WAL mode, surviving process reloads and multi-worker execution.
+* **Human-in-the-Loop Gate with Rejection Feedback Loop:** Reviewers can approve or reject with specific feedback (e.g., *"Use dict.get instead of try-except"*). The agent ingests feedback and automatically refines the patch.
+* **Google SRE Post-Mortem Generation:** Upon approval, the agent automatically compiles an official Post-Mortem report (Timeline, MTTD, MTTR, 5 Whys, Action Items) and opens tracking issues on GitHub.
+* **Interactive 4-Step Visual Dashboard:** Web interface featuring a War Room Live Timeline, feedback modal, and Post-Mortem Markdown viewer.
+* **100% Automated Test Suite:** 33 comprehensive unit and API integration tests running in ~1.5 seconds.
 
 ---
 
-## 2. System Architecture
+## 2. System Architecture (5-Stage SRE Lifecycle)
 
 ```text
-[ Monitoring / Alerting Webhook / Engineer ]
-                     │
-                     ▼ (POST /incidents/trigger)
-┌────────────────────────────────────────────────────────┐
-│ FastAPI Application (BackgroundTasks)                  │
-│  └── Dispatches background worker with thread_id       │
-└────────────────────┬───────────────────────────────────┘
-                     │
-                     ▼
-┌────────────────────────────────────────────────────────┐
-│ LangGraph StateGraph Execution                         │
-│                                                        │
-│   [investigate] <─── (Fetch additional logs) ──────┐   │
-│          │                                         │   │
-│          ▼                                         │   │
-│    [tools (query_error_logs)] ─────────────────────┘   │
-│          │                                             │
-│          ▼                                             │
-│     [plan_fix] (RCA & code patch proposal)             │
-│          │                                             │
-│     BREAKPOINT (State halted before execute_fix)       │
-└──────────┬─────────────────────────────────────────────┘
-           │
-           ▼ Client Polling (GET /incidents/{id}/status)
-┌────────────────────────────────────────────────────────┐
-│ Human-in-the-Loop Operator Gate                        │
-│ (Web Dashboard / Swagger UI / CLI)                     │
-│   ├── [ Approve ] ──> (POST /approve)                  │
-│   └── [ Reject  ] ──> (POST /approve)                  │
-└──────────┬─────────────────────────────────────────────┘
-           │
-           ▼ Resumes graph with human approval state
-┌────────────────────────────────────────────────────────┐
-│     [execute_fix] (Create Pull Request on GitHub)      │
-│          │                                             │
-│          ▼                                             │
-│        [END]                                           │
-└────────────────────────────────────────────────────────┘
+                     [ Prometheus / Grafana / Sentry Alert ]
+                                       │
+                                       ▼ (POST /alerts/webhook)
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ Stage 1: INGESTION & TRIAGE (FastAPI -> Background Task)                     │
+│  ├── Parse alert payload (service, error_type, metrics, stack trace)          │
+│  └── Classify Severity: P1-Critical / P2-High / P3-Medium                     │
+└──────────────────────────────────────┬────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ Stage 2: EMERGENCY MITIGATION & WAR ROOM (Node: mitigate_node)                │
+│  ├── Execute immediate runbook: Restart container / Rollback / Shed traffic   │
+│  ├── Dispatch War Room Alert (Slack/Discord Webhook + Web Dashboard)          │
+│  └── Record Mitigation Timestamp (for MTTD / MTTR calculation)                │
+└──────────────────────────────────────┬────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ Stage 3: DEEP ROOT CAUSE ANALYSIS (Node: investigate_node)                    │
+│  ├── Query error logs & stack traces                                          │
+│  ├── Analyze code and synthesize minimal safe patch                           │
+│  └── Validate code syntax with Python AST                                     │
+└──────────────────────────────────────┬────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ Stage 4: HUMAN-IN-THE-LOOP GATE (LangGraph Breakpoint)                        │
+│  ├── System Pauses at 'execute_fix'                                           │
+│  ├── Operator Reviews Proposed Patch on Web Dashboard / API                   │
+│  │                                                                            │
+│  ├── [ REJECT WITH FEEDBACK ] ──────────────────────────────────────────┐     │
+│  │    Operator: "Use dict.get instead"                                  │     │
+│  │    Agent loops back to Stage 3, adapts code, and pauses again        │     │
+│  │                                                                      ▼     │
+│  └── [ APPROVE PATCH ] ──> Resumes Graph ───────────────────────────────┘     │
+└──────────────────────────────────────┬────────────────────────────────────────┘
+                                       │
+                                       ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ Stage 5: RESOLUTION & POST-MORTEM (Node: execute_fix_node)                    │
+│  ├── Create GitHub Branch & Open Pull Request                                 │
+│  ├── Generate Google SRE-style Post-Mortem Report (Timeline, 5 Whys, MTTR)    │
+│  ├── Create GitHub Prevention Issue for engineering backlog                   │
+│  └── Update War Room with Resolution Summary                                  │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Tech Stack
-
-- **Language:** Python 3.10+
-- **Agent Orchestration:** LangGraph 0.2+, LangChain Core 0.3+
-- **LLM Engine:** Google Gemini (`gemini-2.5-flash`) via `langchain-google-genai`
-- **Web & API Backend:** FastAPI 0.110+, Uvicorn, Pydantic v2
-- **Testing:** Pytest 8.x, HTTPX
-- **Environment Management:** `python-dotenv`
-
----
-
-## 4. Project Directory Structure
+## 3. Project Directory Structure
 
 ```text
 incident-response-agent/
-├── scripts/                      # Helper & diagnostic utilities
-│   └── check_models.py           # Diagnostic script to list active Gemini API models
+├── docs/                         # Specifications & Implementation Plans
+│   └── superpowers/
+│       ├── specs/2026-10-30-autonomous-sre-engine-design.md
+│       └── plans/2026-10-30-autonomous-sre-engine.md
+├── scripts/                      # Diagnostic and helper scripts
+│   └── check_models.py           # Check available Gemini models for API key
 ├── src/
-│   ├── core/                     # Centralized configuration management
+│   ├── core/                     # Central configuration management
 │   │   ├── __init__.py
-│   │   └── config.py             # Settings class (API keys, model configuration, paths)
+│   │   └── config.py             # Settings (API keys, model selection, paths)
 │   ├── agent/                    # LangGraph core workflow
 │   │   ├── __init__.py
-│   │   ├── graph.py              # StateGraph compilation with HITL interrupt breakpoint
-│   │   ├── nodes.py              # Nodes: investigate, tool_node, plan_fix, execute_fix
-│   │   └── state.py              # IncidentState TypedDict schema
+│   │   ├── checkpointer.py       # PersistentSqliteSaver (SQLite-backed state persistence)
+│   │   ├── graph.py              # 5-stage StateGraph compilation & HITL breakpoint
+│   │   ├── nodes.py              # triage, mitigate, investigate, plan_fix, execute_fix
+│   │   └── state.py              # Extended IncidentState schema
 │   ├── api/                      # REST API & Web Dashboard layer
 │   │   ├── static/
-│   │   │   └── dashboard.html    # Standalone interactive TailwindCSS web dashboard
+│   │   │   └── dashboard.html    # Interactive 4-step TailwindCSS web dashboard
 │   │   ├── __init__.py
 │   │   ├── app.py                # FastAPI endpoints & background task dispatchers
 │   │   └── schemas.py            # Pydantic request / response validation schemas
-│   ├── tools/                    # Tool definitions for LLM tool calling
+│   ├── tools/                    # Tool definitions for SRE capabilities
 │   │   ├── __init__.py
-│   │   └── incident_tools.py     # query_error_logs, create_github_pr
+│   │   ├── incident_tools.py     # query_error_logs, create_github_pr
+│   │   ├── mitigation_tools.py   # restart_container, rollback_deployment, apply_traffic_shedding
+│   │   ├── communication_tools.py # post_war_room_alert, generate_war_room_card
+│   │   └── postmortem_tools.py   # generate_google_sre_postmortem, create_github_prevention_issue
 │   ├── __init__.py
 │   └── main.py                   # Module entrypoint delegate
-├── tests/                        # Comprehensive test suite
-│   └── test_agent.py             # 15 automated unit & integration tests
+├── tests/                        # 33 unit and integration tests
+│   ├── test_agent.py
+│   ├── test_communication_tools.py
+│   ├── test_mitigation_tools.py
+│   ├── test_postmortem_tools.py
+│   ├── test_sre_api.py
+│   ├── test_sre_workflow.py
+│   └── test_state_and_persistence.py
 ├── .env                          # Local environment variables
 ├── .gitignore
-├── main.py                       # Root CLI entry point (Run interactive terminal flow)
+├── main.py                       # Root CLI entry point
+├── pytest.ini                    # Pytest configuration
 ├── README.md
-└── requirements.txt              # Production and testing dependencies
+└── requirements.txt
 ```
 
 ---
 
-## 5. Environment Configuration
+## 4. Running the Application
 
-Create a `.env` file in the project root:
-
-```env
-# Google Gemini Developer API Key (Required)
-GOOGLE_API_KEY="AIzaSyYourGeminiApiKeyHere"
-
-# Gemini Model Selection (Optional, defaults to gemini-2.5-flash)
-GEMINI_MODEL="gemini-2.5-flash"
-
-# Model Temperature (Optional, defaults to 0.2)
-DEFAULT_TEMPERATURE=0.2
-```
-
----
-
-## 6. Installation & Setup
-
-### 1. Clone Repository & Set Up Virtual Environment
-
+### 1. Web Dashboard & REST API Mode (Recommended)
 ```bash
-# Clone the repository
-git clone https://github.com/<your-username>/incident-response-agent.git
-cd incident-response-agent
-
-# Create and activate virtual environment
-# Linux / macOS:
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Windows (PowerShell):
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+uvicorn src.api.app:app --reload --port 8000
 ```
+Open your browser at:
+* **Interactive SRE Dashboard:** [http://localhost:8000/](http://localhost:8000/)
+* **Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### 2. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## 7. Running the Application
-
-### Mode 1: Interactive CLI Workflow
-Run the end-to-end incident investigation directly in your terminal with interactive human approval:
-
+### 2. Interactive Terminal CLI Mode
 ```bash
 python main.py
 ```
 
-**Terminal Workflow Experience:**
-1. The agent ingests the error alert and queries logs via `query_error_logs`.
-2. The agent diagnoses the root cause and synthesizes a proposed code patch.
-3. The graph hits the breakpoint and pauses:
-   ```text
-   HE THONG TAM DUNG: HUMAN-IN-THE-LOOP (HITL) BREAKPOINT
-   Node tiep theo bi chan lai: ('execute_fix',)
-   Ban va do Agent de xuat: [...]
-   Ban co dong y phe duyet ban va nay de tao PR khong? (y/n):
-   ```
-4. Typing `y` resumes graph execution to open the GitHub PR; typing `n` halts and cancels the operation.
-
 ---
 
-### Mode 2: Web Dashboard & REST API
-Start the FastAPI server:
+## 5. Automated Testing
 
+Run all 33 tests across all modules:
 ```bash
-uvicorn src.api.app:app --reload --port 8000
+pytest -v
 ```
-
-Access the interfaces via your browser:
-* **Interactive Web Dashboard:** [http://localhost:8000/](http://localhost:8000/)
-* **Interactive Swagger UI Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
-
----
-
-## 8. Automated Testing
-
-Run the test suite with Pytest:
-
-```bash
-pytest tests/ -v
-```
-
-All 15 unit and integration tests run in ~1.1 seconds with zero external network dependencies:
-- Tools execution (`query_error_logs`, `create_github_pr`)
-- Message formatting and Gemini list/dict parsing
-- Conditional graph routing (`tools` vs. `plan_fix`)
-- Plan and fix nodes execution under both approved and rejected states
-- FastAPI API endpoints (health, background task trigger, state inspection, approval gate)
-
----
-
-## 9. Diagnostic Scripts
-
-To inspect which Gemini models are available for your API key:
-
-```bash
-python scripts/check_models.py
+Output:
+```text
+============================= 33 passed in 1.50s ==============================
 ```
 
 ---
 
-## 10. API Reference
-
-### 1. Trigger Incident Investigation
-* **Endpoint:** `POST /incidents/trigger`
-* **Status:** `202 Accepted`
-* **Request Body:**
-  ```json
-  {
-    "service_name": "payment_service",
-    "issue_description": "Connection timeout after 3000ms",
-    "thread_id": "INCIDENT-PAYMENT-001"
-  }
-  ```
-* **Response:**
-  ```json
-  {
-    "thread_id": "INCIDENT-PAYMENT-001",
-    "status": "processing",
-    "next_node": null,
-    "proposed_fix": null,
-    "message": "Agent đã tiếp nhận sự cố và đang xử lý trong background..."
-  }
-  ```
-
----
-
-### 2. Poll Incident Status & Inspect Fix Proposal
-* **Endpoint:** `GET /incidents/{thread_id}/status`
-* **Response (When Paused at HITL Breakpoint):**
-  ```json
-  {
-    "thread_id": "INCIDENT-PAYMENT-001",
-    "status": "paused_at_breakpoint",
-    "approval_status": "pending",
-    "next_node": "execute_fix",
-    "proposed_fix": "Root cause: Timeout communicating with payment gateway at 10.0.4.12:443. Proposed fix: Introduce Circuit Breaker pattern with backoff retry...",
-    "is_paused": true
-  }
-  ```
-
----
-
-### 3. Submit Human Approval Decision
-* **Endpoint:** `POST /incidents/{thread_id}/approve`
-* **Request Body:**
-  ```json
-  {
-    "approved": true
-  }
-  ```
-* **Response:**
-  ```json
-  {
-    "thread_id": "INCIDENT-PAYMENT-001",
-    "status": "approved",
-    "final_output": "Da hoan thanh: Success: Pull Request #142 'fix(payment-service): resolve Connection timeout' created on backend/payment-service:fix/payment-service-incident-patch."
-  }
-  ```
-
----
-
-## 11. Supported Incident Scenarios (Mock Logs)
-
-1. **Application Logic Error (`auth_service`):**
-   * *Log Signature:* `TypeError: 'NoneType' object is not subscriptable in verify_jwt() at /app/auth/tokens.py line 42`.
-   * *Agent Outcome:* Identifies missing `user_id` in token payload and synthesizes safe dictionary key access.
-2. **Infrastructure Network Timeout (`payment_service`):**
-   * *Log Signature:* `ConnectionTimeout: Failed to connect to payment gateway at 10.0.4.12:443 after 3000ms`.
-   * *Agent Outcome:* Diagnoses external gateway unresponsiveness and synthesizes a Circuit Breaker with exponential retry backoff.
-3. **High-Concurrency Database Deadlock (`inventory_service`):**
-   * *Log Signature:* `psycopg2.errors.DeadlockDetected on relation 'stock_items' under 12,000 req/s flash sale spike`.
-   * *Agent Outcome:* Identifies conflicting locks between transactions and proposes atomic Redis lua deductions and ordered row locking.
-
----
-
-## 12. License
+## 6. License
 
 This project is licensed under the [MIT License](LICENSE).
