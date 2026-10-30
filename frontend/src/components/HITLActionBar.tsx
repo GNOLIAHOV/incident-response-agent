@@ -140,6 +140,25 @@ export function HITLActionBar({
     );
   }
 
+  // If agent is still actively working in background and has not paused at breakpoint yet
+  if (!isPaused) {
+    return (
+      <div className="rounded-xl bg-surface-900 border border-hairline p-4">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-4 w-4 text-indigo-400 animate-spin shrink-0" />
+          <div>
+            <h4 className="font-semibold text-white text-xs">
+              Swarm Specialists Actively Investigating & Synthesizing Patch...
+            </h4>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              The HITL authorization controls will activate automatically once the AST validation gate is reached.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl bg-surface-900 border border-hairline p-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5 pb-3 border-b border-hairline">

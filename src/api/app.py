@@ -227,10 +227,20 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
             detail=f"Không tìm thấy phiên làm việc với thread_id '{thread_id}'.",
         )
 
+    # Idempotent: Nếu đã duyệt hoặc hoàn tất trước đó thì trả về thành công thay vì báo lỗi 400
+    current_approval = snapshot.values.get("approval_status")
+    if current_approval in ["approved", "completed"]:
+        return IncidentApprovalResponse(
+            thread_id=thread_id,
+            status="approved",
+            final_output="Sự cố đã được phê duyệt và hoàn tất trước đó.",
+            post_mortem_report=snapshot.values.get("post_mortem_report"),
+        )
+
     if not snapshot.next:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Phiên làm việc '{thread_id}' không ở trạng thái chờ duyệt.",
+            detail=f"Phiên làm việc '{thread_id}' đang trong tiến trình phân tích tự động, chưa tới điểm dừng chờ duyệt. Vui lòng đợi trong giây lát.",
         )
 
     # 1. Trường hợp phê duyệt
