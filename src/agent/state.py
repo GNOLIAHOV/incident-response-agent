@@ -35,7 +35,7 @@ class IncidentState(TypedDict, total=False):
     reviewer_feedback: Optional[str]  # Góp ý của kỹ sư khi từ chối bản vá
 
     # Trạng thái phê duyệt (Human-in-the-loop)
-    approval_status: Literal["pending", "approved", "rejected", "revising"]
+    approval_status: Literal["pending", "approved", "rejected", "revising", "escalated"]
 
     # Resolution & Post-Mortem
     github_pr_url: Optional[str]

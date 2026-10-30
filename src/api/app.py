@@ -166,6 +166,8 @@ def get_incident_status(thread_id: str):
 
     if is_paused:
         current_status = "paused_at_breakpoint"
+    elif snapshot.values.get("approval_status") == "escalated" or snapshot.values.get("next_worker") == "escalate":
+        current_status = "escalated"
     elif snapshot.values.get("approval_status") in ["approved", "rejected"]:
         current_status = "completed"
     else:
@@ -241,6 +243,15 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
         )
         for _ in incident_app.stream(None, config=config):
             pass
+
+        revised_snapshot = incident_app.get_state(config)
+        if revised_snapshot.values.get("approval_status") == "escalated":
+            return IncidentApprovalResponse(
+                thread_id=thread_id,
+                status="escalated",
+                final_output="Sự cố đã vượt ngưỡng 5 lượt điều phối và chuyển giao cho kỹ sư trực ban (Escalated).",
+                post_mortem_report=None,
+            )
 
         return IncidentApprovalResponse(
             thread_id=thread_id,

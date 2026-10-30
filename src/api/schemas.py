@@ -30,7 +30,7 @@ class IncidentTriggerResponse(BaseModel):
 
 class IncidentStatusResponse(BaseModel):
     thread_id: str
-    status: Literal["processing", "paused_at_breakpoint", "completed", "not_found"]
+    status: Literal["processing", "paused_at_breakpoint", "completed", "escalated", "not_found"]
     severity: Optional[str] = None
     service_name: Optional[str] = None
     approval_status: Optional[str] = None
@@ -51,7 +51,7 @@ class IncidentApprovalRequest(BaseModel):
 
 class IncidentApprovalResponse(BaseModel):
     thread_id: str
-    status: Literal["approved", "rejected", "revising"]
+    status: Literal["approved", "rejected", "revising", "escalated"]
     final_output: str
     post_mortem_report: Optional[str] = None
 

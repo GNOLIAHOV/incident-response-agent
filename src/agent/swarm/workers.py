@@ -2,6 +2,7 @@
 Each worker is bounded to its operational domain with isolated prompts and contracts.
 """
 
+import ast
 from datetime import datetime, timezone
 from typing import Optional
 from langchain_core.messages import AIMessage, SystemMessage
@@ -135,14 +136,22 @@ def patching_worker(state: IncidentState) -> dict:
             f"# Patch adjusted per human reviewer feedback: {reviewer_feedback}\n"
             f"user_id = payload.get('user_id', None)\n"
             f"if not user_id:\n"
-            f"    raise InvalidTokenException('Token missing user_id')\n"
+            f"    raise ValueError('Token missing user_id')\n"
             f"```"
         )
+        # Kiểm tra tính hợp lệ cú pháp bằng AST Parser thật của Python
+        raw_code = "\n".join([line for line in fix_code.splitlines() if not line.startswith("```")])
+        try:
+            ast.parse(raw_code)
+            ast_status = "Passed ✅"
+        except SyntaxError as exc:
+            ast_status = f"Failed ❌ ({exc})"
+
         proposed_content = (
             f"### [Revised Patch Proposal]\n"
             f"**Adjusted based on Reviewer Feedback:** '{reviewer_feedback}'\n\n"
             f"{fix_code}\n\n"
-            f"*AST Syntax Validation:* Passed ✅"
+            f"*AST Syntax Validation:* {ast_status}"
         )
         timeline.append(
             {
@@ -159,16 +168,24 @@ def patching_worker(state: IncidentState) -> dict:
             f"    payload = decode_jwt(token)\n"
             f"    user_id = payload.get('user_id') if payload else None\n"
             f"    if not user_id:\n"
-            f"        raise AuthenticationError('Payload missing user_id')\n"
+            f"        raise ValueError('Payload missing user_id')\n"
             f"    return user_id\n"
             f"```"
         )
+        # Kiểm tra tính hợp lệ cú pháp bằng AST Parser thật của Python
+        raw_code = "\n".join([line for line in fix_code.splitlines() if not line.startswith("```")])
+        try:
+            ast.parse(raw_code)
+            ast_status = "Passed ✅"
+        except SyntaxError as exc:
+            ast_status = f"Failed ❌ ({exc})"
+
         proposed_content = (
             f"### [Autonomous Safe Code Patch]\n"
             f"**Target Service:** {service_name}\n"
             f"**Objective:** Prevent NoneType subscript error.\n\n"
             f"{fix_code}\n\n"
-            f"*AST Syntax Validation:* Passed ✅"
+            f"*AST Syntax Validation:* {ast_status}"
         )
         timeline.append(
             {
@@ -178,6 +195,14 @@ def patching_worker(state: IncidentState) -> dict:
             }
         )
 
+    timeline.append(
+        {
+            "time": now,
+            "event": "[HITL Gate] Bản vá đã sẵn sàng, tạm dừng chờ kỹ sư phê duyệt.",
+            "stage": "governance",
+        }
+    )
+
     return {
         "proposed_fix": proposed_content,
         "approval_status": "pending",
@@ -186,13 +211,14 @@ def patching_worker(state: IncidentState) -> dict:
 
 
 def hitl_gate_node(state: IncidentState) -> dict:
-    """🚪 HITL Gate Node: Cổng kiểm duyệt của kỹ sư trực ban trước khi mở PR."""
+    """🚪 HITL Gate Node: Tiếp nhận quyết định của kỹ sư trực ban sau khi mở khóa breakpoint."""
     now = get_current_time_str()
     timeline = list(state.get("timeline") or [])
+    approval = state.get("approval_status", "pending")
     timeline.append(
         {
             "time": now,
-            "event": "[HITL Gate] Bản vá đã sẵn sàng, tạm dừng chờ kỹ sư phê duyệt.",
+            "event": f"[HITL Gate] Tiếp nhận quyết định của kỹ sư: {approval}.",
             "stage": "governance",
         }
     )

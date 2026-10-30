@@ -37,7 +37,8 @@ def supervisor_node(state: IncidentState) -> dict:
         )
         return {
             "next_worker": "escalate",
-            "swarm_iterations": current_iterations,
+            "approval_status": "escalated",
+            "swarm_iterations": 5,
             "timeline": timeline,
         }
 
@@ -52,11 +53,11 @@ def supervisor_node(state: IncidentState) -> dict:
         next_worker = "remediation"
     elif not rca_done:
         next_worker = "investigator"
-    elif approval in ("rejected", "revising") or not fix_done:
+    elif approval == "revising" or not fix_done:
         next_worker = "patching"
     elif approval == "pending":
         next_worker = "hitl"
-    elif approval == "approved":
+    elif approval in ("approved", "rejected"):
         next_worker = "scribe"
     else:
         next_worker = "FINISH"

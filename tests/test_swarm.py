@@ -177,11 +177,16 @@ def test_supervisor_routing_progression():
     r5 = supervisor_node(state)
     assert r5["next_worker"] == "scribe"
 
+    # 6. Bị từ chối không có góp ý -> scribe (để ghi nhận hủy bỏ và kết thúc)
+    state.update({"approval_status": "rejected", "swarm_iterations": 3})
+    r6 = supervisor_node(state)
+    assert r6["next_worker"] == "scribe"
+
 
 def test_supervisor_circuit_breaker_escalation():
     from src.agent.swarm.supervisor import supervisor_node
 
-    # Khi iterations >= 5 -> kích hoạt ngắt mạch escalate
+    # Khi iterations >= 5 -> kích hoạt ngắt mạch escalate và gán approval_status="escalated"
     state: IncidentState = {
         "incident_id": "INC-BREAKER-01",
         "service_name": "auth_service",
@@ -192,7 +197,8 @@ def test_supervisor_circuit_breaker_escalation():
     }
     res = supervisor_node(state)
     assert res["next_worker"] == "escalate"
-    assert res["swarm_iterations"] == 6
+    assert res["approval_status"] == "escalated"
+    assert res["swarm_iterations"] == 5
     assert any("Ngắt mạch" in t.get("event", "") for t in res.get("timeline", []))
 
 
@@ -235,3 +241,40 @@ def test_swarm_graph_full_lifecycle_and_pause():
     assert final_snapshot.values["approval_status"] == "approved"
     assert "github_pr_url" in final_snapshot.values
     assert "post_mortem_report" in final_snapshot.values
+
+
+def test_swarm_graph_rejection_without_feedback_aborts():
+    from src.agent.graph import create_incident_graph
+    from langgraph.checkpoint.memory import MemorySaver
+    from langchain_core.messages import HumanMessage
+
+    app = create_incident_graph(checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": "TEST-SWARM-REJECT-E2E"}}
+
+    initial_input = {
+        "messages": [HumanMessage(content="Auth service crash")],
+        "incident_id": "INC-SWARM-REJ-E2E",
+        "service_name": "auth_service",
+        "severity": "P1",
+        "issue_description": "TypeError in verify_jwt",
+        "alert_source": "prometheus",
+        "approval_status": "pending",
+        "timeline": [],
+    }
+
+    # Chạy đến breakpoint
+    for _ in app.stream(initial_input, config=config):
+        pass
+
+    snapshot = app.get_state(config)
+    assert snapshot.next == ("hitl_gate",)
+
+    # Kỹ sư từ chối hoàn toàn không có góp ý
+    app.update_state(config, {"approval_status": "rejected"})
+    for _ in app.stream(None, config=config):
+        pass
+
+    final_snapshot = app.get_state(config)
+    assert not final_snapshot.next  # Kết thúc tại END, không bị lặp vô tận
+    assert final_snapshot.values["approval_status"] == "rejected"
+    assert "Hủy thao tác" in final_snapshot.values["messages"][-1].content
