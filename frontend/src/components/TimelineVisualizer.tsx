@@ -103,20 +103,23 @@ export function TimelineVisualizer({
 
       <div className="relative pl-5 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-800">
         {STAGES.map((stage, idx) => {
-          // Find matching event from timeline using stage alias keys
-          const matchingEvent = events.find((e) => {
-            const stageName = (e.stage || "").toLowerCase();
-            return stage.keys.includes(stageName);
-          });
+          // Find matching event from timeline using stage alias keys (prefer newest)
+          const matchingEvent = events
+            .slice()
+            .reverse()
+            .find((e) => {
+              const stageName = (e.stage || "").toLowerCase();
+              return stage.keys.includes(stageName);
+            });
 
-          // Check if this stage has occurred
+          const isPausedAtThis = stage.id === "hitl_gate" && isPaused;
+
+          // Check if this stage has completed
           const hasOccurred =
-            !!matchingEvent ||
-            isCompleted ||
-            (stage.id !== "scribe" && isPaused && idx <= 4);
-
-          const isPausedAtThis =
-            stage.id === "hitl_gate" && isPaused;
+            !isPausedAtThis &&
+            (isCompleted ||
+              (stage.id !== "scribe" && isPaused && idx < 4) ||
+              (!isPaused && !!matchingEvent));
 
           const eventMessage =
             matchingEvent?.event ||
@@ -139,10 +142,10 @@ export function TimelineVisualizer({
                     : "bg-surface-950 border border-slate-700 text-slate-500"
                 }`}
               >
-                {hasOccurred ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : isPausedAtThis ? (
+                {isPausedAtThis ? (
                   <Clock className="h-3 w-3" />
+                ) : hasOccurred ? (
+                  <CheckCircle2 className="h-3 w-3" />
                 ) : (
                   <div className="h-1 w-1 rounded-full bg-slate-600" />
                 )}

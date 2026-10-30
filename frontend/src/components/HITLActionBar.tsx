@@ -46,13 +46,15 @@ export function HITLActionBar({
       }
     };
 
-    if (isPaused || approvalStatus === "pending") {
+    // Only enable shortcuts when strictly paused waiting at breakpoint
+    if (isPaused && approvalStatus !== "approved" && approvalStatus !== "rejected") {
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
   }, [isPaused, approvalStatus]);
 
   const handleApprove = async () => {
+    if (!isPaused) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -66,6 +68,7 @@ export function HITLActionBar({
   };
 
   const handleReject = async () => {
+    if (!isPaused) return;
     setIsSubmitting(true);
     setError(null);
     try {

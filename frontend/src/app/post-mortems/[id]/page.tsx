@@ -55,7 +55,7 @@ export default function PostMortemDetailPage() {
       ) : postMortem ? (
         <PostMortemViewer data={postMortem} />
       ) : (
-        <div className="rounded-2xl bg-obsidian-850 border border-slate-800 p-12 text-center">
+        <div className="rounded-2xl bg-surface-900 border border-hairline p-12 text-center">
           <BookOpen className="h-10 w-10 text-slate-600 mx-auto mb-3" />
           <h3 className="text-white font-semibold text-base mb-1">
             Post-Mortem Not Available Yet

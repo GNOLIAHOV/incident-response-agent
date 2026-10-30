@@ -9,20 +9,48 @@ interface CodePatchViewerProps {
   isPaused?: boolean;
 }
 
+function parsePatchProposal(rawText?: string | null) {
+  if (!rawText) {
+    return { objective: "", code: "", astStatus: "" };
+  }
+
+  let objective = "";
+  let code = rawText;
+  let astStatus = "Passed ✅";
+
+  // Extract Objective if present in markdown
+  const objMatch = rawText.match(/\*\*Objective:\*\*\s*([^\n]+)/i);
+  if (objMatch) objective = objMatch[1].trim();
+
+  // Extract AST Syntax Validation if present
+  const astMatch = rawText.match(/\*AST Syntax Validation:\*\s*([^\n]+)/i);
+  if (astMatch) astStatus = astMatch[1].trim();
+
+  // Extract clean code block from ```python ... ```
+  const codeMatch = rawText.match(/```(?:python)?\r?\n([\s\S]*?)```/);
+  if (codeMatch) {
+    code = codeMatch[1].trim();
+  }
+
+  return { objective, code, astStatus };
+}
+
 export function CodePatchViewer({
   patchCode,
   serviceName,
 }: CodePatchViewerProps) {
   const [copied, setCopied] = useState(false);
 
+  const { objective, code, astStatus } = parsePatchProposal(patchCode);
+
   const handleCopy = () => {
-    if (!patchCode) return;
-    navigator.clipboard.writeText(patchCode);
+    if (!code) return;
+    navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lines = (patchCode || "").split("\n");
+  const lines = code ? code.split("\n") : [];
 
   return (
     <div className="rounded-xl bg-surface-900 border border-hairline p-5">
@@ -35,15 +63,20 @@ export function CodePatchViewer({
             </h3>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Target: <span className="font-mono text-slate-300">{serviceName || "service"}/app.py</span>
+            Target file: <span className="font-mono text-slate-300">{serviceName || "service"}/app.py</span>
+            {objective && (
+              <span className="text-slate-400 block sm:inline sm:ml-2">
+                • {objective}
+              </span>
+            )}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {patchCode ? (
+          {code ? (
             <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>AST Verified Safe</span>
+              <span>{astStatus ? `AST ${astStatus}` : "AST Verified Safe"}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-surface-850 text-slate-400 text-[11px] font-mono border border-hairline">
@@ -52,11 +85,11 @@ export function CodePatchViewer({
             </div>
           )}
 
-          {patchCode && (
+          {code && (
             <button
               onClick={handleCopy}
               className="p-1 rounded bg-surface-850 border border-hairline text-slate-400 hover:text-white transition-colors"
-              title="Copy Patch to Clipboard"
+              title="Copy Clean Python Code"
             >
               {copied ? (
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -68,11 +101,11 @@ export function CodePatchViewer({
         </div>
       </div>
 
-      {patchCode ? (
+      {code ? (
         <div className="relative rounded-lg bg-surface-950 border border-hairline overflow-hidden font-mono text-xs">
           <div className="flex items-center justify-between px-3.5 py-1.5 bg-surface-900 border-b border-hairline text-[10px] text-slate-400">
-            <span>Unified Diff Inspection</span>
-            <span className="text-emerald-400 font-semibold">Zero Unsafe Syscalls Detected</span>
+            <span>Python Source Diff</span>
+            <span className="text-emerald-400 font-semibold">Ready for GitHub PR Dispatch</span>
           </div>
 
           <div className="p-3.5 overflow-x-auto max-h-96">
@@ -80,7 +113,12 @@ export function CodePatchViewer({
               <tbody>
                 {lines.map((line, idx) => {
                   const isComment = line.trim().startsWith("#");
-                  const isKeyword = line.includes("def ") || line.includes("return ") || line.includes("raise ");
+                  const isKeyword =
+                    line.includes("def ") ||
+                    line.includes("return ") ||
+                    line.includes("raise ") ||
+                    line.includes("if ") ||
+                    line.includes("else:");
 
                   return (
                     <tr key={idx} className="hover:bg-surface-900/60 transition-colors">

@@ -117,7 +117,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Microservices Swarm Topology Map */}
-      <ServiceHealthMap />
+      <ServiceHealthMap incidents={incidents} />
 
       {/* Incident Operations Stream */}
       <IncidentTable incidents={incidents} onRefresh={loadData} />

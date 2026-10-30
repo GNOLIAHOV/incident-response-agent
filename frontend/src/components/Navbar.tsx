@@ -27,7 +27,7 @@ export function Navbar() {
 
   const navItems = [
     { href: "/", label: "Executive Dashboard", icon: Activity },
-    { href: "/incidents/INC-PROD-001", label: "War Room Center", icon: Terminal },
+    { href: "/incidents", label: "War Room Center", icon: Terminal },
     { href: "/post-mortems", label: "Post-Mortem KB", icon: BookOpen },
   ];
 

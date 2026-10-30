@@ -3,6 +3,8 @@
 import React from "react";
 import { Server, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 
+import { IncidentItem } from "@/lib/types";
+
 interface ServiceItem {
   id: string;
   name: string;
@@ -13,46 +15,70 @@ interface ServiceItem {
   activeGuard: string;
 }
 
-const SERVICES: ServiceItem[] = [
+const BASE_SERVICES: Omit<ServiceItem, "status" | "activeGuard">[] = [
   {
     id: "payment_service",
     name: "payment_service",
     category: "Financial Gateway",
-    status: "mitigated",
     latency: "34ms",
     uptime: "99.98%",
-    activeGuard: "MitigationSpecialist",
   },
   {
     id: "auth_service",
     name: "auth_service",
     category: "Security & IAM",
-    status: "healthy",
     latency: "12ms",
     uptime: "100.00%",
-    activeGuard: "TriageSpecialist",
   },
   {
     id: "inventory_service",
     name: "inventory_service",
     category: "Catalog & Stock",
-    status: "healthy",
     latency: "18ms",
     uptime: "99.95%",
-    activeGuard: "PatchingSpecialist",
   },
   {
     id: "notification_service",
     name: "notification_service",
     category: "Telegram / Alerts",
-    status: "healthy",
     latency: "45ms",
     uptime: "100.00%",
-    activeGuard: "ScribeSpecialist",
   },
 ];
 
-export function ServiceHealthMap() {
+interface ServiceHealthMapProps {
+  incidents?: IncidentItem[];
+}
+
+export function ServiceHealthMap({ incidents = [] }: ServiceHealthMapProps) {
+  // Compute real-time status from active incident stream
+  const services: ServiceItem[] = BASE_SERVICES.map((base) => {
+    const activeIncident = incidents.find(
+      (inc) =>
+        inc.service_name.toLowerCase().includes(base.id.split("_")[0]) &&
+        (inc.status === "paused_at_breakpoint" || inc.status === "processing")
+    );
+
+    if (activeIncident) {
+      return {
+        ...base,
+        status: activeIncident.status === "paused_at_breakpoint" ? "mitigated" : "investigating",
+        latency: "142ms (degraded)",
+        activeGuard:
+          activeIncident.status === "paused_at_breakpoint"
+            ? "MitigationSpecialist Active"
+            : "InvestigatorSpecialist Active",
+      };
+    }
+
+    return {
+      ...base,
+      status: "healthy",
+      activeGuard: "Autonomous SRE Guard",
+    };
+  });
+
+  const hasMitigated = services.some((s) => s.status !== "healthy");
   return (
     <div className="rounded-xl bg-surface-900 border border-hairline p-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -68,15 +94,25 @@ export function ServiceHealthMap() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-md border border-emerald-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-            All 4 Nodes Operational
+          <span
+            className={`flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-0.5 rounded-md border ${
+              hasMitigated
+                ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                hasMitigated ? "bg-amber-400 animate-pulse" : "bg-emerald-400"
+              }`}
+            ></span>
+            {hasMitigated ? "Active Incident Mitigated" : "All 4 Nodes Operational"}
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {SERVICES.map((srv) => {
+        {services.map((srv) => {
           const isMitigated = srv.status === "mitigated";
           const isHealthy = srv.status === "healthy";
 

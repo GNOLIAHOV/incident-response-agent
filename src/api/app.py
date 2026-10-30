@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import uuid
 from typing import Any, Dict, List
@@ -348,25 +349,52 @@ def get_incident_post_mortem(thread_id: str):
 )
 def list_incidents():
     """Liệt kê danh sách tất cả các sự cố đang lưu trong cơ sở dữ liệu SQLite."""
-    # Lấy danh sách các thread từ checkpointer nếu hỗ trợ
     checkpointer = getattr(incident_app, "checkpointer", None)
-    if checkpointer and hasattr(checkpointer, "storage"):
+    thread_ids = []
+
+    # 1. Đọc trực tiếp danh sách thread_id từ SQLite nếu có checkpointer bền vững
+    if checkpointer and hasattr(checkpointer, "_get_connection"):
+        try:
+            with contextlib.closing(checkpointer._get_connection()) as conn:
+                cursor = conn.execute("SELECT thread_id FROM thread_checkpoints ORDER BY updated_at DESC")
+                thread_ids = [row[0] for row in cursor.fetchall()]
+        except Exception:
+            pass
+
+    # 2. Dự phòng lấy từ RAM nếu SQLite chưa sẵn sàng
+    if not thread_ids and checkpointer and hasattr(checkpointer, "storage"):
         thread_ids = list(checkpointer.storage.keys())
-        results = []
-        for tid in thread_ids:
-            st = incident_app.get_state({"configurable": {"thread_id": tid}})
-            if st and st.values:
-                results.append(
-                    {
-                        "thread_id": tid,
-                        "service_name": st.values.get("service_name"),
-                        "severity": st.values.get("severity"),
-                        "status": st.values.get("approval_status"),
-                        "mitigation_action": st.values.get("mitigation_action_taken"),
-                    }
-                )
-        return results
-    return []
+
+    results = []
+    for tid in thread_ids:
+        st = incident_app.get_state({"configurable": {"thread_id": tid}})
+        if st and st.values:
+            next_nodes = list(st.next) if st.next else []
+            proposed_fix = st.values.get("proposed_fix")
+            is_paused = (("hitl_gate" in next_nodes) or ("execute_fix" in next_nodes)) and bool(proposed_fix)
+
+            approval_status = st.values.get("approval_status")
+            if is_paused:
+                lifecycle_status = "paused_at_breakpoint"
+            elif approval_status in ["approved", "rejected"]:
+                lifecycle_status = "completed"
+            elif approval_status == "escalated":
+                lifecycle_status = "escalated"
+            else:
+                lifecycle_status = "processing"
+
+            results.append(
+                {
+                    "thread_id": tid,
+                    "service_name": st.values.get("service_name") or "service",
+                    "severity": st.values.get("severity") or "P2",
+                    "status": lifecycle_status,
+                    "approval_status": approval_status or "pending",
+                    "mitigation_action": st.values.get("mitigation_action_taken"),
+                    "created_at": getattr(st, "created_at", None),
+                }
+            )
+    return results
 
 
 @app.post(

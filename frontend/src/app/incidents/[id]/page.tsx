@@ -80,7 +80,7 @@ export default function IncidentCommandCenter() {
               {severity} SEVERITY
             </span>
             <span className="px-2 py-0.5 rounded bg-surface-850 border border-hairline text-[11px] font-mono text-slate-300">
-              Target: {incident?.service_name || "payment_service"}
+              Target: {incident?.service_name || "Detecting service..."}
             </span>
           </div>
         </div>
