@@ -204,10 +204,8 @@ TELEGRAM_ENABLED=false
 docker compose up -d --build
 ```
 
-2. Access Dashboard:
-* **Enterprise SRE Web Portal:** [http://localhost:3002/](http://localhost:3002/) (hoặc [http://localhost:3000/](http://localhost:3000/))
-* **FastAPI Backend Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
+2. Access Web Portal:
+* **Enterprise SRE Web Portal:** [http://localhost:3002/](http://localhost:3002/)
 
 3. Stop the service:
 ```bash
@@ -230,11 +228,10 @@ npm run dev
 ```
 
 3. **Access Interfaces:**
-* **Enterprise SRE Web Portal:** [http://localhost:3000/](http://localhost:3000/)
-* **Executive Dashboard:** [http://localhost:3000/](http://localhost:3000/)
-* **War Room Command Center:** [http://localhost:3000/incidents/INC-PROD-001](http://localhost:3000/incidents/INC-PROD-001)
-* **Post-Mortem Knowledge Base:** [http://localhost:3000/post-mortems](http://localhost:3000/post-mortems)
-* **FastAPI Backend Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Enterprise SRE Web Portal:** [http://localhost:3002/](http://localhost:3002/)
+* **Executive Dashboard:** [http://localhost:3002/](http://localhost:3002/)
+* **War Room Command Center:** [http://localhost:3002/incidents](http://localhost:3002/incidents)
+* **Post-Mortem Knowledge Base:** [http://localhost:3002/post-mortems](http://localhost:3002/post-mortems)
 
 ### Option C: Enterprise Kubernetes Deployment (In-VPC)
 
