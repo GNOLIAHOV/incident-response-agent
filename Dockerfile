@@ -41,6 +41,7 @@ RUN useradd -m -u 1001 appuser \
 # Sao chép mã nguồn ứng dụng
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser pytest.ini ./
+COPY --chown=appuser:appuser main.py ./
 
 # Chuyển sang quyền appuser
 USER appuser

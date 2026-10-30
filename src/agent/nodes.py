@@ -233,7 +233,8 @@ def execute_fix_node(state: IncidentState) -> dict:
     # 1. Tạo Pull Request trên GitHub
     service_slug = service_name.replace("_", "-").lower()
     repo_name = f"backend/{service_slug}"
-    branch_name = f"fix/{service_slug}-incident-patch"
+    clean_id = incident_id.replace("_", "-").lower()
+    branch_name = f"fix/{service_slug}-{clean_id}"
     pr_title = f"fix({service_slug}): resolve {issue_desc[:50]}"
 
     pr_result = create_github_pr.invoke(
@@ -255,7 +256,7 @@ def execute_fix_node(state: IncidentState) -> dict:
             pass
 
     # 2. Tạo GitHub Issue cho việc phòng ngừa tái diễn sau sự cố
-    create_github_prevention_issue.invoke(
+    issue_result = create_github_prevention_issue.invoke(
         {
             "repo": repo_name,
             "title": f"[SRE Prevention] Hardening & tests for {service_name}",
@@ -263,13 +264,19 @@ def execute_fix_node(state: IncidentState) -> dict:
             "labels": ["sre", "prevention", severity.lower()],
         }
     )
+    issue_url = issue_result.get("issue_url", "")
 
     # 3. Sinh báo cáo Google SRE Post-Mortem hoàn chỉnh
     now = get_current_time_str()
+    event_msg = f"Bản vá được phê duyệt. Đã tạo PR tại {github_pr_url}"
+    if issue_url:
+        event_msg += f" và Issue phòng ngừa tại {issue_url}"
+    event_msg += "."
+
     timeline.append(
         {
             "time": now,
-            "event": f"Bản vá được phê duyệt. Đã tạo PR tại {github_pr_url}.",
+            "event": event_msg,
             "stage": "resolution",
         }
     )

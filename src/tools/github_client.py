@@ -158,8 +158,8 @@ class GitHubClient:
                 "branch": branch,
                 "repo": target_repo,
                 "message": (
-                    f"Success (Simulated): Pull Request #142 '{title}' created on {target_repo}:{branch} "
-                    f"(Fallback due to API warning: {exc})."
+                    f"Success (Simulated): Pull Request #142 '{title}' created on {repo}:{branch} "
+                    f"(URL: https://github.com/{target_repo}/pull/142) (Fallback due to: {exc})."
                 ),
             }
 

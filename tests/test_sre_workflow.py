@@ -76,3 +76,5 @@ def test_execute_fix_node_generates_postmortem():
     assert "post_mortem_report" in result
     assert "Google SRE Incident Post-Mortem Report" in result["post_mortem_report"]
     assert "INC-TEST-EXECUTE" in result["post_mortem_report"]
+    assert "github_pr_url" in result
+    assert result["github_pr_url"].startswith("https://github.com")
