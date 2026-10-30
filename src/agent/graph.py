@@ -1,6 +1,6 @@
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from src.agent.checkpointer import PersistentSqliteSaver
 from src.agent.nodes import (
     execute_fix_node,
     investigate_node,
@@ -45,9 +45,9 @@ def create_incident_graph(checkpointer=None):
     # Kết thúc sau khi thực thi bản vá
     workflow.add_edge("execute_fix", END)
 
-    # 4. Checkpointer để lưu snapshot state (mặc định dùng MemorySaver nếu không truyền vào)
+    # 4. Checkpointer để lưu snapshot state (mặc định lưu bền vững vào SQLite)
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = PersistentSqliteSaver()
 
     # 5. Biên dịch đồ thị kèm Breakpoint ngắt TRƯỚC KHI node execute_fix chạy
     app = workflow.compile(
