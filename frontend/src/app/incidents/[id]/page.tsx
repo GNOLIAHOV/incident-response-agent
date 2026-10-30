@@ -160,6 +160,7 @@ export default function IncidentCommandCenter() {
             threadId={threadId}
             isPaused={isPaused}
             approvalStatus={incident?.approval_status}
+            timelineCount={incident?.timeline?.length || 0}
             onDecisionSubmitted={loadStatus}
           />
         </div>

@@ -9,13 +9,16 @@ import {
   Loader2,
   MessageSquare,
   ShieldCheck,
+  AlertCircle,
+  Zap,
 } from "lucide-react";
-import { submitApproval } from "@/lib/api";
+import { submitApproval, resumeIncident } from "@/lib/api";
 
 interface HITLActionBarProps {
   threadId: string;
   isPaused: boolean;
   approvalStatus?: string;
+  timelineCount?: number;
   onDecisionSubmitted?: () => void;
 }
 
@@ -23,12 +26,26 @@ export function HITLActionBar({
   threadId,
   isPaused,
   approvalStatus,
+  timelineCount = 0,
   onDecisionSubmitted,
 }: HITLActionBarProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const handleResume = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await resumeIncident(threadId);
+      if (onDecisionSubmitted) onDecisionSubmitted();
+    } catch (err: any) {
+      setError(err?.message || "Failed to launch swarm run");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Keyboard shortcuts: A for Approve, R for Revise
   useEffect(() => {
@@ -138,6 +155,44 @@ export function HITLActionBar({
               The proposed code modification was cancelled. No pull request was created.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If uninitialized or stalled with 0 events
+  if (!isPaused && timelineCount === 0) {
+    return (
+      <div className="rounded-xl bg-surface-900 border border-hairline p-4">
+        {error && (
+          <div className="mb-3 p-2 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+            {error}
+          </div>
+        )}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+            <div>
+              <h4 className="font-semibold text-white text-xs">
+                Pipeline Idle • Waiting for Dispatch
+              </h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                This incident thread was registered but the automated multi-agent workflow is idle.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleResume}
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shrink-0 disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Zap className="h-3 w-3" />
+            )}
+            <span>Dispatch Swarm Run</span>
+          </button>
         </div>
       </div>
     );

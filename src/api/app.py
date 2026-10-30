@@ -214,6 +214,32 @@ def get_incident_status(thread_id: str):
 
 
 @app.post(
+    "/incidents/{thread_id}/resume",
+    response_model=IncidentTriggerResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["Incidents"],
+)
+def resume_incident_pipeline(thread_id: str, background_tasks: BackgroundTasks):
+    """Khởi động lại hoặc tiếp tục điều tra Swarm cho sự cố đang bị gián đoạn hoặc chưa chạy."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = incident_app.get_state(config)
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy phiên làm việc '{thread_id}'.",
+        )
+
+    background_tasks.add_task(resume_agent_workflow_task, thread_id)
+    return IncidentTriggerResponse(
+        thread_id=thread_id,
+        status="processing",
+        next_node=None,
+        proposed_fix=None,
+        message=f"Đã kích hoạt lại tiến trình SRE Swarm cho sự cố {thread_id}.",
+    )
+
+
+@app.post(
     "/incidents/{thread_id}/approve",
     response_model=IncidentApprovalResponse,
     tags=["Incidents"],
@@ -357,14 +383,21 @@ def list_incidents():
     if checkpointer and hasattr(checkpointer, "_get_connection"):
         try:
             with contextlib.closing(checkpointer._get_connection()) as conn:
-                cursor = conn.execute("SELECT thread_id FROM thread_checkpoints ORDER BY updated_at DESC")
+                cursor = conn.execute(
+                    "SELECT thread_id FROM thread_checkpoints "
+                    "WHERE thread_id NOT LIKE 'INC-TEST-%' AND thread_id NOT LIKE 'HEALTH-CHECK-%' "
+                    "ORDER BY updated_at DESC"
+                )
                 thread_ids = [row[0] for row in cursor.fetchall()]
         except Exception:
             pass
 
     # 2. Dự phòng lấy từ RAM nếu SQLite chưa sẵn sàng
     if not thread_ids and checkpointer and hasattr(checkpointer, "storage"):
-        thread_ids = list(checkpointer.storage.keys())
+        thread_ids = [
+            t for t in checkpointer.storage.keys()
+            if not t.startswith("INC-TEST-") and not t.startswith("HEALTH-CHECK-")
+        ]
 
     results = []
     for tid in thread_ids:

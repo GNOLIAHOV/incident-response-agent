@@ -133,3 +133,14 @@ export async function triggerIncident(
   }
   return await res.json();
 }
+
+export async function resumeIncident(threadId: string): Promise<IncidentTriggerResponse> {
+  const res = await fetch(`${API_BASE}/incidents/${encodeURIComponent(threadId)}/resume`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to resume incident: HTTP ${res.status} - ${text}`);
+  }
+  return await res.json();
+}
