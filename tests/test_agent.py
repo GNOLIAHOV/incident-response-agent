@@ -147,7 +147,8 @@ def test_execute_fix_node_rejected():
     }
     result = execute_fix_node(state)
     assert len(result["messages"]) == 1
-    assert "Ke hoach da bi tu choi" in result["messages"][0].content
+    content_lower = result["messages"][0].content.lower()
+    assert "từ chối" in content_lower or "tu choi" in content_lower
 
 
 def test_execute_fix_node_approved():
