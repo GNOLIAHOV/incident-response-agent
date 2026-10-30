@@ -162,7 +162,7 @@ def get_incident_status(thread_id: str):
     next_nodes = list(snapshot.next) if snapshot.next else []
     proposed_fix = snapshot.values.get("proposed_fix")
 
-    is_paused = ("execute_fix" in next_nodes) and bool(proposed_fix)
+    is_paused = (("hitl_gate" in next_nodes) or ("execute_fix" in next_nodes)) and bool(proposed_fix)
 
     if is_paused:
         current_status = "paused_at_breakpoint"
@@ -214,7 +214,6 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
         incident_app.update_state(
             config,
             {"approval_status": "approved"},
-            as_node="plan_fix",
         )
         for _ in incident_app.stream(None, config=config):
             pass
@@ -239,8 +238,10 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
                 "approval_status": "revising",
                 "reviewer_feedback": payload.feedback,
             },
-            as_node="plan_fix",
         )
+        for _ in incident_app.stream(None, config=config):
+            pass
+
         return IncidentApprovalResponse(
             thread_id=thread_id,
             status="revising",
@@ -253,7 +254,6 @@ def approve_incident_fix(thread_id: str, payload: IncidentApprovalRequest):
         incident_app.update_state(
             config,
             {"approval_status": "rejected"},
-            as_node="plan_fix",
         )
         for _ in incident_app.stream(None, config=config):
             pass
