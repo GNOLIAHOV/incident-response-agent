@@ -5,10 +5,6 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
 # Tạo virtual environment độc lập
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -22,11 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.11-slim AS runner
 
 WORKDIR /app
-
-# Cài đặt curl phục vụ container healthcheck
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
 
 # Sao chép virtual environment từ builder stage
 COPY --from=builder /opt/venv /opt/venv
@@ -49,9 +40,9 @@ USER appuser
 # Khai báo port của FastAPI và Web Dashboard
 EXPOSE 8000
 
-# Thiết lập Healthcheck kiểm tra định kỳ endpoint /health
+# Thiết lập Healthcheck kiểm tra định kỳ endpoint /health bằng Python urllib chuẩn
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Khởi chạy Uvicorn server
 CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
