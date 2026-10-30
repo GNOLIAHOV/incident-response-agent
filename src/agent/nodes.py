@@ -1,23 +1,34 @@
-import os
 from typing import Literal
+
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from src.core.config import settings
 from src.agent.state import IncidentState
 from src.tools.incident_tools import create_github_pr, query_error_logs
 
 tools = [query_error_logs, create_github_pr]
 tool_map = {t.name: t for t in tools}
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.5-flash-lite",
-    temperature=0.2,
-)
-llm_with_tools = llm.bind_tools(tools)
+_llm_instance = None
+
+
+def get_llm():
+    """Khởi tạo hoặc lấy instance LLM một cách lười (Lazy Initialization).
+
+    Tránh việc crash ứng dụng khi import module lúc chưa cấu hình GOOGLE_API_KEY.
+    """
+    global _llm_instance
+    if _llm_instance is None:
+        _llm_instance = ChatGoogleGenerativeAI(
+            model=settings.GEMINI_MODEL,
+            temperature=settings.DEFAULT_TEMPERATURE,
+        ).bind_tools(tools)
+    return _llm_instance
 
 
 def extract_text_content(content) -> str:
-    """Chuyen doi content tu list/dict cua Gemini thanh chuoi van ban sach."""
+    """Chuyển đổi content từ list/dict của Gemini thành chuỗi văn bản sạch."""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -32,7 +43,7 @@ def extract_text_content(content) -> str:
 
 
 def investigate_node(state: IncidentState) -> dict:
-    """Node 1: Phan tich bao cao va goi tool tra cuu log neu can."""
+    """Node 1: Phân tích báo cáo và gọi tool tra cứu log nếu cần."""
     system_prompt = SystemMessage(
         content=(
             "Ban la mot SRE/AI Incident Response Engineer. "
@@ -47,12 +58,13 @@ def investigate_node(state: IncidentState) -> dict:
     else:
         messages = history
 
-    response = llm_with_tools.invoke(messages)
+    llm_runner = get_llm()
+    response = llm_runner.invoke(messages)
     return {"messages": [response]}
 
 
 def tool_node(state: IncidentState) -> dict:
-    """Node 2: Thuc thi cac cong cu ma LLM yeu cau."""
+    """Node 2: Thực thi các công cụ mà LLM yêu cầu."""
     last_message = state["messages"][-1]
     tool_outputs = []
 
@@ -72,7 +84,7 @@ def tool_node(state: IncidentState) -> dict:
 
 
 def plan_fix_node(state: IncidentState) -> dict:
-    """Node 3: Trich xuat de xuat ban va va dua vao trang thai cho phe duyet."""
+    """Node 3: Trích xuất đề xuất bản vá và đưa vào trạng thái chờ phê duyệt."""
     ai_messages = [m for m in state["messages"] if isinstance(m, AIMessage)]
     if ai_messages:
         proposed_content = extract_text_content(ai_messages[-1].content)
@@ -86,7 +98,7 @@ def plan_fix_node(state: IncidentState) -> dict:
 
 
 def execute_fix_node(state: IncidentState) -> dict:
-    """Node 4: Thuc thi tao PR sau khi con nguoi phe duyet."""
+    """Node 4: Thực thi tạo PR sau khi con người phê duyệt."""
     if state.get("approval_status") == "rejected":
         return {
             "messages": [
@@ -97,12 +109,20 @@ def execute_fix_node(state: IncidentState) -> dict:
         }
 
     fix_content = str(state.get("proposed_fix", ""))
+    service_name = state.get("service_name", "app_service")
+    issue_desc = state.get("issue_description", "incident fix")
+
+    # Tạo tên repository, branch và PR title linh hoạt theo service_name thực tế
+    service_slug = service_name.replace("_", "-").lower()
+    repo_name = f"backend/{service_slug}"
+    branch_name = f"fix/{service_slug}-incident-patch"
+    pr_title = f"fix({service_slug}): resolve {issue_desc[:50]}"
 
     pr_result = create_github_pr.invoke(
         {
-            "repo": "backend/auth-service",
-            "branch": "fix/jwt-payload-null-check",
-            "title": "fix(auth): handle missing user_id in JWT verification",
+            "repo": repo_name,
+            "branch": branch_name,
+            "title": pr_title,
             "changes": fix_content,
         }
     )
@@ -114,7 +134,7 @@ def execute_fix_node(state: IncidentState) -> dict:
 
 
 def route_investigation(state: IncidentState) -> Literal["tools", "plan_fix"]:
-    """Ham dieu kien phan nhanh giua tools va plan_fix."""
+    """Hàm điều kiện phân nhánh giữa tools và plan_fix."""
     last_message = state["messages"][-1]
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"

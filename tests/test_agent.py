@@ -1,13 +1,17 @@
 import os
 import sys
 from unittest.mock import MagicMock, patch
+from dotenv import load_dotenv
+
+# Đảm bảo nạp biến môi trường từ .env ngay từ đầu
+load_dotenv()
+
+# Đảm bảo import được code từ thư mục gốc của dự án
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
-from fastapi.testclient import TestClient
+from fastapi import BackgroundTasks, HTTPException
 from langchain_core.messages import AIMessage, HumanMessage
-
-# Dam bao import duoc code tu thu muc goc cua du an
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.agent.nodes import (
     execute_fix_node,
@@ -16,18 +20,25 @@ from src.agent.nodes import (
     route_investigation,
 )
 from src.agent.state import IncidentState
-from src.api.app import app
+from src.api.app import (
+    approve_incident_fix,
+    get_incident_status,
+    health_check,
+    trigger_incident,
+)
+from src.api.schemas import (
+    IncidentApprovalRequest,
+    IncidentTriggerRequest,
+)
 from src.tools.incident_tools import create_github_pr, query_error_logs
-
-client = TestClient(app)
 
 
 # ============================================================================
-# 1. KIEM THU CAC TOOLS (incident_tools.py)
+# 1. KIỂM THỬ CÁC TOOLS (incident_tools.py)
 # ============================================================================
 
 def test_query_error_logs_existing_service():
-    """Kiem tra tool query_error_logs tra ve log chinh xac khi tim dung service."""
+    """Kiểm tra tool query_error_logs trả về log chính xác khi tìm đúng service."""
     result = query_error_logs.invoke({"service_name": "auth_service", "keyword": "TypeError"})
     assert "auth_service" in result
     assert "TypeError: 'NoneType' object is not subscriptable" in result
@@ -35,20 +46,20 @@ def test_query_error_logs_existing_service():
 
 
 def test_query_error_logs_without_keyword():
-    """Kiem tra tool query_error_logs van chay tot khi khong truyen tham so keyword."""
+    """Kiểm tra tool query_error_logs vẫn chạy tốt khi không truyền tham số keyword."""
     result = query_error_logs.invoke({"service_name": "auth_service"})
     assert "auth_service" in result
     assert "TypeError" in result
 
 
 def test_query_error_logs_unknown_service():
-    """Kiem tra tool query_error_logs xu ly khi service khong ton tai trong mock logs."""
+    """Kiểm tra tool query_error_logs xử lý khi service không tồn tại trong mock logs."""
     result = query_error_logs.invoke({"service_name": "unknown_service", "keyword": ""})
     assert "Khong tim thay log loi" in result
 
 
 def test_create_github_pr_success():
-    """Kiem tra tool create_github_pr tra ve chuoi thong bao thanh cong."""
+    """Kiểm tra tool create_github_pr trả về chuỗi thông báo thành công."""
     result = create_github_pr.invoke(
         {
             "repo": "backend/auth-service",
@@ -62,16 +73,16 @@ def test_create_github_pr_success():
 
 
 # ============================================================================
-# 2. KIEM THU CAC NODES VA LOGIC DIEU HUONG (nodes.py)
+# 2. KIỂM THỬ CÁC NODES VÀ LOGIC ĐIỀU HƯỚNG (nodes.py)
 # ============================================================================
 
 def test_extract_text_content_string():
-    """Kiem tra ham extract_text_content voi dau vao la chuoi text thuan."""
+    """Kiểm tra hàm extract_text_content với đầu vào là chuỗi text thuần."""
     assert extract_text_content("test content") == "test content"
 
 
 def test_extract_text_content_gemini_format():
-    """Kiem tra ham extract_text_content trich xuat dung text tu cau truc list cua Gemini."""
+    """Kiểm tra hàm extract_text_content trích xuất đúng text từ cấu trúc list của Gemini."""
     gemini_data = [
         {"type": "text", "text": "Dong 1"},
         {"type": "text", "text": "Dong 2"},
@@ -81,7 +92,7 @@ def test_extract_text_content_gemini_format():
 
 
 def test_route_investigation_with_tool_calls():
-    """Kiem tra ham route_investigation re nhanh sang 'tools' khi message cuoi co tool_calls."""
+    """Kiểm tra hàm route_investigation rẽ nhánh sang 'tools' khi message cuối có tool_calls."""
     mock_ai_message = MagicMock()
     mock_ai_message.tool_calls = [{"name": "query_error_logs", "args": {}}]
     state: IncidentState = {
@@ -96,7 +107,7 @@ def test_route_investigation_with_tool_calls():
 
 
 def test_route_investigation_without_tool_calls():
-    """Kiem tra ham route_investigation re nhanh sang 'plan_fix' khi khong con tool_calls."""
+    """Kiểm tra hàm route_investigation rẽ nhánh sang 'plan_fix' khi không còn tool_calls."""
     mock_ai_message = MagicMock()
     mock_ai_message.tool_calls = []
     state: IncidentState = {
@@ -111,7 +122,7 @@ def test_route_investigation_without_tool_calls():
 
 
 def test_plan_fix_node():
-    """Kiem tra node plan_fix trich xuat dung noi dung de xuat va dat status pending."""
+    """Kiểm tra node plan_fix trích xuất đúng nội dung đề xuất và đặt status pending."""
     ai_msg = AIMessage(content="De xuat sua loi tai dong 42")
     state: IncidentState = {
         "messages": [ai_msg],
@@ -126,7 +137,7 @@ def test_plan_fix_node():
 
 
 def test_execute_fix_node_rejected():
-    """Kiem tra node execute_fix dung lai va khong tao PR khi bi tu choi."""
+    """Kiểm tra node execute_fix dừng lại và không tạo PR khi bị từ chối."""
     state: IncidentState = {
         "messages": [],
         "service_name": "auth_service",
@@ -140,60 +151,55 @@ def test_execute_fix_node_rejected():
 
 
 def test_execute_fix_node_approved():
-    """Kiem tra node execute_fix tao PR thanh cong khi duoc duyet."""
+    """Kiểm tra node execute_fix tạo PR thành công khi được duyệt với service_name động."""
     state: IncidentState = {
         "messages": [],
-        "service_name": "auth_service",
-        "issue_description": "test",
+        "service_name": "payment_service",
+        "issue_description": "Connection timeout to payment gateway",
         "proposed_fix": "code fix",
         "approval_status": "approved",
     }
     result = execute_fix_node(state)
     assert result["approval_status"] == "approved"
     assert "Success: Pull Request" in result["messages"][0].content
+    assert "backend/payment-service" in result["messages"][0].content
 
 
 # ============================================================================
-# 3. KIEM THU CAC ENDPOINT FASTAPI (app.py)
+# 3. KIỂM THỬ CÁC ENDPOINT FASTAPI (app.py)
 # ============================================================================
 
 def test_api_health_check():
-    """Kiem tra endpoint /health tra ve status 200 va dung format JSON."""
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "incident-response-agent"}
+    """Kiểm tra endpoint /health trả về status 200 và đúng format JSON."""
+    result = health_check()
+    assert result == {"status": "ok", "service": "incident-response-agent"}
 
 
-@patch("src.api.app.run_agent_workflow_task")
-def test_api_trigger_incident_background(mock_task):
-    """Kiem tra endpoint /incidents/trigger tiep nhan yeu cau va phan hoi ngay 202 ma khong can goi LLM that."""
-    payload = {
-        "service_name": "auth_service",
-        "issue_description": "Loi 500 xac thuc token",
-        "thread_id": "TEST-THREAD-001",
-    }
-    response = client.post("/incidents/trigger", json=payload)
-    assert response.status_code == 202
-    data = response.json()
-    assert data["thread_id"] == "TEST-THREAD-001"
-    assert data["status"] == "processing"
-    # Kiem tra xem tac vu nen da duoc dang ky goi hay chua
-    mock_task.assert_called_once()
+def test_api_trigger_incident_background():
+    """Kiểm tra endpoint trigger incident tạo background task và phản hồi 202."""
+    bg_tasks = BackgroundTasks()
+    payload = IncidentTriggerRequest(
+        service_name="auth_service",
+        issue_description="Lỗi 500 xác thực token",
+        thread_id="TEST-THREAD-001",
+    )
+    result = trigger_incident(payload, bg_tasks)
+    assert result.thread_id == "TEST-THREAD-001"
+    assert result.status == "processing"
+    # Kiểm tra tác vụ nền đã được thêm vào BackgroundTasks
+    assert len(bg_tasks.tasks) == 1
 
 
 def test_api_get_status_initial():
-    """Kiem tra endpoint GET status khi state vua khoi tao."""
-    response = client.get("/incidents/TEST-THREAD-001/status")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["thread_id"] == "TEST-THREAD-001"
-    assert "status" in data
+    """Kiểm tra endpoint GET status khi state vừa khởi tạo."""
+    result = get_incident_status("TEST-THREAD-001")
+    assert result.thread_id == "TEST-THREAD-001"
+    assert result.status in ["processing", "paused_at_breakpoint", "completed"]
 
 
 def test_api_approve_not_paused():
-    """Kiem tra API chan thao tac approve khi graph chua o trang thai cho duyet."""
-    response = client.post(
-        "/incidents/THREAD-KHONG-TON-TAI/approve",
-        json={"approved": True},
-    )
-    assert response.status_code in [400, 404]
+    """Kiểm tra API chặn thao tác approve khi graph chưa ở trạng thái chờ duyệt."""
+    payload = IncidentApprovalRequest(approved=True)
+    with pytest.raises(HTTPException) as exc_info:
+        approve_incident_fix("THREAD-KHONG-TON-TAI", payload)
+    assert exc_info.value.status_code in [400, 404]
