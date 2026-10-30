@@ -57,7 +57,7 @@ def run_incident_workflow():
     incident_app.update_state(
         config,
         {"approval_status": approval_decision},
-        as_node="plan_fix",
+        as_node="hitl_gate",
     )
 
     print("\n" + "=" * 60)
@@ -69,12 +69,20 @@ def run_incident_workflow():
             print(f"-> Hoàn thành Node: [{node_name}]")
 
     final_snapshot = incident_app.get_state(config)
-    last_message = final_snapshot.values["messages"][-1]
+    messages = final_snapshot.values.get("messages", [])
+    last_message = messages[-1].content if messages else "Chu trình Swarm SRE đã xử lý thành công."
 
     print("\n" + "=" * 60)
     print("KẾT QUẢ CUỐI CÙNG:")
     print("=" * 60)
-    print(last_message.content)
+    print(last_message)
+
+    post_mortem = final_snapshot.values.get("post_mortem_report")
+    if post_mortem:
+        print("\n" + "=" * 60)
+        print("BÁO CÁO GOOGLE SRE POST-MORTEM TỰ ĐỘNG:")
+        print("=" * 60)
+        print(post_mortem)
 
 
 if __name__ == "__main__":
