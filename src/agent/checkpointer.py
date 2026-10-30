@@ -2,12 +2,13 @@ import contextlib
 import os
 import pickle
 import sqlite3
-from typing import Any, Optional, Sequence
+from typing import Any, Iterator, Optional, Sequence
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
     ChannelVersions,
     Checkpoint,
     CheckpointMetadata,
+    CheckpointTuple,
 )
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -72,6 +73,28 @@ class PersistentSqliteSaver(InMemorySaver):
                 except Exception:
                     continue
 
+    def _load_thread_from_db(self, thread_id: str) -> None:
+        """Đọc và đồng bộ dữ liệu của thread_id từ SQLite vào RAM nếu có cập nhật từ tiến trình khác."""
+        with contextlib.closing(self._get_connection()) as conn:
+            cursor = conn.execute(
+                "SELECT storage_blob, writes_blob, blobs_blob FROM thread_checkpoints WHERE thread_id = ?",
+                (thread_id,),
+            )
+            row = cursor.fetchone()
+            if row:
+                storage_blob, writes_blob, blobs_blob = row
+                try:
+                    if storage_blob:
+                        self.storage[thread_id] = pickle.loads(storage_blob)
+                    if writes_blob:
+                        thread_writes = pickle.loads(writes_blob)
+                        self.writes.update(thread_writes)
+                    if blobs_blob:
+                        thread_blobs = pickle.loads(blobs_blob)
+                        self.blobs.update(thread_blobs)
+                except Exception:
+                    pass
+
     def _sync_thread_to_db(self, thread_id: str) -> None:
         """Đồng bộ trạng thái của một thread xuống file SQLite."""
         thread_storage = self.storage.get(thread_id, {})
@@ -125,3 +148,25 @@ class PersistentSqliteSaver(InMemorySaver):
         with contextlib.closing(self._get_connection()) as conn:
             with conn:
                 conn.execute("DELETE FROM thread_checkpoints WHERE thread_id = ?", (thread_id,))
+
+    def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+        """Truy xuất snapshot mới nhất từ SQLite, đảm bảo tính nhất quán giữa nhiều tiến trình."""
+        thread_id = config.get("configurable", {}).get("thread_id")
+        if thread_id:
+            self._load_thread_from_db(thread_id)
+        return super().get_tuple(config)
+
+    def list(
+        self,
+        config: Optional[RunnableConfig],
+        *,
+        filter: Optional[dict[str, Any]] = None,
+        before: Optional[RunnableConfig] = None,
+        limit: Optional[int] = None,
+    ) -> Iterator[CheckpointTuple]:
+        """Liệt kê danh sách các checkpoints đồng bộ từ SQLite."""
+        if config and "configurable" in config and "thread_id" in config["configurable"]:
+            self._load_thread_from_db(config["configurable"]["thread_id"])
+        else:
+            self._load_all_from_db()
+        return super().list(config, filter=filter, before=before, limit=limit)

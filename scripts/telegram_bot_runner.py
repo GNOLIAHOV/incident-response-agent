@@ -73,18 +73,22 @@ def run_polling():
     logger.info(f"📱 Chat ID giám sát: {chat_id}")
     logger.info("=" * 60)
 
-    # 1. Đảm bảo trạng thái cho INC-DEMO-001
-    ensure_demo_incident_state("INC-DEMO-001")
-
-    # 2. Xóa Webhook cũ để chuyển sang Long-Polling mượt mà
+    # 1. Xóa Webhook và dọn dẹp các update cũ để chuyển sang Long-Polling mượt mà
+    offset = 0
     try:
         with httpx.Client(timeout=10.0) as client:
-            client.get(f"{base_url}/deleteWebhook")
-            logger.info("Đã xóa Webhook cũ, sẵn sàng nhận sự kiện qua Long-Polling.")
+            client.get(f"{base_url}/deleteWebhook?drop_pending_updates=True")
+            logger.info("Đã xóa Webhook và dọn dẹp các sự kiện cũ trên Telegram.")
+            
+            # Lấy offset mới nhất để không nhận lại các sự kiện cũ
+            resp = client.get(f"{base_url}/getUpdates", params={"offset": -1})
+            if resp.status_code == 200:
+                results = resp.json().get("result", [])
+                if results:
+                    offset = results[-1]["update_id"] + 1
+                    logger.info(f"Khởi tạo offset lắng nghe mới từ: {offset}")
     except Exception as exc:
-        logger.warning(f"Lỗi khi xóa Webhook: {exc}")
-
-    offset = 0
+        logger.warning(f"Lỗi khi xóa Webhook / flush updates: {exc}")
     logger.info("Đang lắng nghe sự kiện từ Telegram... (Anh có thể bấm các nút trên điện thoại bây giờ!)")
 
     while True:

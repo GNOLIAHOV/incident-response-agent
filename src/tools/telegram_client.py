@@ -77,15 +77,16 @@ class TelegramClient:
     ) -> Dict[str, Any]:
         """Phát thông báo cứu nạn khẩn cấp lên nhóm Telegram SRE trực ban."""
         icon = "🔴" if severity == "P1" else ("🟠" if severity == "P2" else "🟡")
+        action_safe = action_taken.replace("_", " ")
         card = (
             f"🚨 *[SRE WAR ROOM ALERT] {icon} {severity} - {service_name.upper()}*\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"• *Incident ID:* `{incident_id}`\n"
             f"• *Service:* `{service_name}`\n"
-            f"• *Hành động đã xử lý:* {action_taken}\n"
+            f"• *Hành động đã xử lý:* {action_safe}\n"
         )
         if extra_details:
-            card += f"• *Chi tiết bổ sung:* {extra_details}\n"
+            card += f"• *Chi tiết bổ sung:* {extra_details.replace('_', ' ')}\n"
         card += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
         return self.send_message(card)
@@ -99,7 +100,9 @@ class TelegramClient:
     ) -> Dict[str, Any]:
         """Gửi thẻ yêu cầu phê duyệt kèm 2 nút bấm tương tác [Approve] và [Reject] trực tiếp trên điện thoại."""
         icon = "🔴" if severity == "P1" else ("🟠" if severity == "P2" else "🟡")
-        preview = fix_summary[:350] + ("..." if len(fix_summary) > 350 else "")
+        # Loại bỏ các cặp backtick lồng nhau để đảm bảo Telegram Markdown v1 hiển thị chuẩn xác
+        clean_code = fix_summary.replace("```python", "").replace("```", "").strip()
+        clean_code = clean_code[:350] + ("..." if len(clean_code) > 350 else "")
 
         card = (
             f"⚠️ *[APPROVAL REQUIRED] YÊU CẦU PHÊ DUYỆT BẢN VÁ*\n"
@@ -107,8 +110,8 @@ class TelegramClient:
             f"• *Incident ID:* `{incident_id}`\n"
             f"• *Dịch vụ:* `{service_name}` ({icon} {severity})\n\n"
             f"*Đề xuất sửa đổi mã nguồn:*\n"
-            f"```python\n{preview}\n```\n\n"
-            f"👉 *Kỹ sư On-call vui lòng bấm nút để kích hoạt hành động:* "
+            f"```python\n{clean_code}\n```\n\n"
+            f"👉 *Kỹ sư On-call vui lòng bấm nút để kích hoạt hành động:*"
         )
 
         reply_markup = {
