@@ -71,7 +71,7 @@ export function HITLActionBar({
   }, [isPaused, approvalStatus]);
 
   const handleApprove = async () => {
-    if (!isPaused) return;
+    if (!isPaused && approvalStatus !== "escalated") return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -155,6 +155,40 @@ export function HITLActionBar({
               The proposed code modification was cancelled. No pull request was created.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (approvalStatus === "escalated") {
+    return (
+      <div className="rounded-xl bg-amber-950/20 border border-amber-500/30 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-white text-xs">
+                🚨 Swarm Circuit Breaker Tripped • Manual On-Call Escalation
+              </h4>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Exceeded 5 autonomous dispatch cycles. You can override and authorize deployment of the AST patch.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleApprove}
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors shrink-0 disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            )}
+            <span>Override & Authorize Deployment</span>
+          </button>
         </div>
       </div>
     );

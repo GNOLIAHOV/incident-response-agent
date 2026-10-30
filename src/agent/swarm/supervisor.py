@@ -16,7 +16,16 @@ def supervisor_node(state: IncidentState) -> dict:
 
     current_iterations = state.get("swarm_iterations", 0) + 1
 
-    # 1. Kiểm tra Circuit Breaker (Tối đa 5 lượt điều phối)
+    approval = state.get("approval_status", "pending")
+
+    # 1. Nếu kỹ sư đã phê duyệt hoặc từ chối, ưu tiên thực thi dứt điểm (không ngắt mạch ở bước do con người quyết định)
+    if approval in ("approved", "rejected"):
+        return {
+            "next_worker": "scribe",
+            "swarm_iterations": current_iterations,
+        }
+
+    # 2. Kiểm tra Circuit Breaker (Tối đa 5 lượt điều phối giữa các Agent trước khi con người duyệt)
     if current_iterations > 5:
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         post_war_room_alert.invoke(
@@ -42,12 +51,11 @@ def supervisor_node(state: IncidentState) -> dict:
             "timeline": timeline,
         }
 
-    # 2. Đánh giá trạng thái nghiệp vụ để giao việc cho Agent phù hợp
+    # 3. Đánh giá trạng thái nghiệp vụ để giao việc cho Agent phù hợp
     mitigation_taken = state.get("mitigation_action_taken")
     mitigation_status = state.get("mitigation_status")
     rca_done = bool(state.get("investigation_summary"))
     fix_done = bool(state.get("proposed_fix"))
-    approval = state.get("approval_status", "pending")
 
     if not mitigation_taken or mitigation_status != "success":
         next_worker = "remediation"
@@ -57,8 +65,6 @@ def supervisor_node(state: IncidentState) -> dict:
         next_worker = "patching"
     elif approval == "pending":
         next_worker = "hitl"
-    elif approval in ("approved", "rejected"):
-        next_worker = "scribe"
     else:
         next_worker = "FINISH"
 
