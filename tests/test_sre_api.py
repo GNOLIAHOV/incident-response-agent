@@ -57,3 +57,12 @@ def test_list_incidents():
     """Kiểm tra endpoint liệt kê danh sách các sự cố."""
     incidents = list_incidents()
     assert isinstance(incidents, list)
+
+
+def test_cors_middleware_registered():
+    """Kiểm tra CORSMiddleware đã được cấu hình trong app để hỗ trợ frontend portal."""
+    from src.api.app import app
+
+    middleware_classes = [m.cls.__name__ for m in app.user_middleware]
+    assert "CORSMiddleware" in middleware_classes
+

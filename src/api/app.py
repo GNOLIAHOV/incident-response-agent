@@ -3,6 +3,7 @@ import uuid
 from typing import Any, Dict, List
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from langchain_core.messages import HumanMessage
 
@@ -27,6 +28,15 @@ app = FastAPI(
     title=settings.API_TITLE,
     description=settings.API_DESCRIPTION,
     version=settings.API_VERSION,
+)
+
+# Enable CORS for Enterprise Web Portal and local development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
