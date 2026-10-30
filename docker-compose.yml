@@ -29,7 +29,7 @@ services:
     container_name: incident_response_portal
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORTAL_PORT:-3001}:3000"
     environment:
       - PORT=3000
       - NEXT_PUBLIC_API_URL=http://localhost:8000

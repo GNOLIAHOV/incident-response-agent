@@ -199,9 +199,9 @@ docker compose up -d --build
 ```
 
 2. Access Dashboard:
-* **Interactive Dashboard:** [http://localhost:8000/](http://localhost:8000/)
-* **Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
-* **API Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Enterprise SRE Web Portal:** [http://localhost:3001/](http://localhost:3001/) (hoặc [http://localhost:3000/](http://localhost:3000/))
+* **FastAPI Backend Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
 
 3. Stop the service:
 ```bash
