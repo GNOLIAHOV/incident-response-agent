@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  incident-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: incident_response_agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      # Mount volume để lưu trữ SQLite database an toàn qua các lần restart
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
